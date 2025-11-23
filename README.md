@@ -1,9 +1,9 @@
-[<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v9.5 Full Cockpit</title>
+    <title>Aether VJ Final Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -26,14 +26,13 @@
         /* --- UI Layer --- */
         #ui-container {
             position: fixed; inset: 0; pointer-events: none; z-index: 100;
-            /* Removed flex layout to allow absolute positioning of panel */
-            padding: 25px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 20px;
         }
 
         .header { 
-            position: absolute; top: 25px; left: 25px;
             display: flex; align-items: flex-start; justify-content: space-between; 
-            pointer-events: auto; z-index: 102;
+            pointer-events: auto; margin-bottom: 10px; 
         }
         .title-group { display: flex; flex-direction: column; gap: 8px; }
         .title-row { display: flex; align-items: center; gap: 15px; }
@@ -71,26 +70,26 @@
         }
         .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
 
-        /* --- COCKPIT PANEL (RIGHT SIDE, FULL HEIGHT) --- */
+        /* --- CONTROLS PANEL (GLASS) --- */
         .controls-panel {
             pointer-events: auto;
             position: absolute;
             top: 20px;
             right: 20px;
-            bottom: 100px; /* Space for bottom bar */
-            width: 520px; /* WIDE enough for 2 cols */
+            bottom: 100px;
+            width: 520px;
             
-            background: rgba(10,10,10,0.92); 
-            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            background: rgba(10, 10, 10, 0.6); 
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
             padding: 20px; 
             
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
-            box-shadow: -10px 0 80px rgba(0,0,0,0.8);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             z-index: 101;
             
-            overflow-y: auto; /* Auto scroll only if screen is too short */
-            scrollbar-width: thin; scrollbar-color: #444 #111;
+            overflow-y: auto;
+            scrollbar-width: thin; scrollbar-color: #444 rgba(0,0,0,0.3);
             
             display: flex;
             flex-direction: column;
@@ -99,12 +98,11 @@
         .controls-panel::-webkit-scrollbar { width: 4px; }
         .controls-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
 
-        /* Grid Layout for Columns */
         .panel-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* Two equal columns */
-            gap: 25px; /* Space between columns */
-            flex: 1; /* Fill remaining height */
+            grid-template-columns: 1fr 1fr; 
+            gap: 25px; 
+            flex: 1;
         }
 
         #viz-canvas {
@@ -118,13 +116,14 @@
             margin: 0 0 10px 0; padding-bottom: 6px;
             border-bottom: 1px solid rgba(0,255,255,0.3);
             text-transform: uppercase; 
+            display: flex; justify-content: space-between; align-items: center;
         }
         .section-spacer { margin-top: 18px; }
 
         .slider-group { margin-bottom: 12px; position: relative; }
         .label-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center; }
-        label { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
-        .value { font-size: 10px; font-family: 'Courier New', monospace; color: #eee; }
+        label { font-size: 10px; color: #ccc; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.8); display:flex; align-items:center; gap:8px; }
+        .value { font-size: 10px; font-family: 'Courier New', monospace; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         
         .sync-dot {
             position: absolute; right: -8px; top: 2px; width: 4px; height: 4px; background: #0ff; border-radius: 50%;
@@ -136,43 +135,46 @@
             width: 100%; -webkit-appearance: none; background: transparent; height: 14px; 
             cursor: pointer; margin: 0; touch-action: none; position: relative; z-index: 200; 
         }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.2); border-radius: 2px;}
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.3); border-radius: 2px;}
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%;
-            background: #111; margin-top: -5px; box-shadow: 0 0 0 1px rgba(255,255,255,0.8); transition: transform 0.1s; 
+            background: #eee; margin-top: -5px; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.1s; 
         }
         input[type=range]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.2); }
 
         select, input[type=text] {
-            width: 100%; background: rgba(0,0,0,0.5); color: #0ff; border: 1px solid rgba(0,255,255,0.3);
+            width: 100%; background: rgba(0,0,0,0.4); color: #0ff; border: 1px solid rgba(0,255,255,0.3);
             padding: 6px; font-size: 11px; border-radius: 4px; outline: none; cursor: pointer;
             font-family: 'Courier New', monospace; text-transform: uppercase;
         }
         select option { background: #111; color: #ccc; }
-        input[type=text] { cursor: text; margin-bottom: 8px; }
-        input[type=text]::placeholder { color: #555; }
+        input[type=text] { cursor: text; margin-bottom: 8px; color: #fff; }
+        input[type=text]::placeholder { color: #aaa; }
 
         .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
         .small-btn {
-            background: #222; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff;
             padding: 6px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; flex: 1;
             text-transform: uppercase; transition: 0.2s;
         }
-        .small-btn:hover { background: #444; border-color: #0ff; }
+        .small-btn:hover { background: rgba(255,255,255,0.2); border-color: #0ff; }
 
         .toggle-btn-fixed {
             position: fixed; top: 25px; right: 25px; z-index: 200; pointer-events: auto;
             width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
             cursor: pointer; border: 1px solid rgba(255,255,255,0.1); color: #888;
-            backdrop-filter: blur(10px); transition: all 0.3s; font-size: 14px; background: rgba(255,255,255,0.02);
+            backdrop-filter: blur(10px); transition: all 0.3s; font-size: 14px; background: rgba(255,255,255,0.05);
         }
-        .toggle-btn-fixed:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
+        .toggle-btn-fixed:hover { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.3); }
 
+        /* --- BOTTOM BAR (GLASS) --- */
         .bottom-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(10,10,10,0.95); border-top: 1px solid rgba(255,255,255,0.1);
+            background: rgba(10, 10, 10, 0.6); 
+            border-top: 1px solid rgba(255,255,255,0.15);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             z-index: 101; display: flex; flex-direction: column; pointer-events: auto;
-            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(20px);
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
             padding-bottom: env(safe-area-inset-bottom);
         }
         .bottom-bar.hidden { transform: translateY(120%); }
@@ -184,27 +186,27 @@
         #seek-slider::-webkit-slider-thumb { background: #0ff; box-shadow: 0 0 10px #0ff; }
         .time-labels {
             display: flex; justify-content: space-between;
-            font-family: 'Courier New', monospace; font-size: 10px; color: #0ff;
+            font-family: 'Courier New', monospace; font-size: 10px; color: #0ff; text-shadow: 0 1px 2px #000;
         }
 
         .file-controls {
             padding: 20px; display: flex; align-items: center; gap: 15px; justify-content: center;
         }
         .custom-file-btn {
-            background: #222; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+            background: rgba(30,30,30,0.8); border: 1px solid rgba(255,255,255,0.2); color: #fff;
             padding: 10px 20px; border-radius: 30px; font-size: 11px; letter-spacing: 1px;
             cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
             white-space: nowrap;
         }
         .custom-file-btn:active { transform: scale(0.95); background: #fff; color: #000; }
-        #file-status { font-size: 11px; color: #0ff; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; text-align: center;}
+        #file-status { font-size: 11px; color: #0ff; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; text-align: center; text-shadow: 0 0 5px rgba(0,255,255,0.5); }
         .play-pause-btn {
             width: 40px; height: 40px; border-radius: 50%; background: #0ff; border: none;
             color: #000; display: flex; align-items: center; justify-content: center; cursor: pointer;
-            display: none; font-weight: bold; font-size: 16px;
+            display: none; font-weight: bold; font-size: 16px; box-shadow: 0 0 15px rgba(0,255,255,0.4);
         }
-        .mic-mode-btn { background: #004400; border-color: #00ff00; color: #00ff00; }
-        .img-mode-btn { background: #000044; border-color: #4444ff; color: #aaaaff; }
+        .mic-mode-btn { background: rgba(0, 68, 0, 0.8); border-color: #00ff00; color: #00ff00; }
+        .img-mode-btn { background: rgba(0, 0, 68, 0.8); border-color: #4444ff; color: #aaaaff; }
 
         #overlay {
             position: fixed; inset: 0; background: #000; z-index: 9999;
@@ -217,16 +219,16 @@
 
         .key-tip {
             position: absolute; bottom: 80px; width: 100%; text-align: center; 
-            font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 1px; pointer-events: none;
-            transition: opacity 0.5s;
+            font-size: 9px; color: rgba(255,255,255,0.5); letter-spacing: 1px; pointer-events: none;
+            transition: opacity 0.5s; text-shadow: 0 1px 2px #000;
         }
         .bottom-bar.hidden ~ .key-tip { opacity: 0; }
 
         @media (max-width: 750px) {
-            .controls-panel { width: 100%; top:auto; right:0; left:0; bottom: 120px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1); height: 60vh; }
+            .controls-panel { width: 100%; top:auto; right:0; left:0; bottom: 120px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1); height: 60vh; background: rgba(10,10,10,0.8); }
             .panel-grid { grid-template-columns: 1fr; gap: 0; }
             .section-spacer { margin-top: 20px; }
-            .header { position: relative; top: 0; left: 0; }
+            .header { position: relative; top: 0; left: 0; margin-bottom: 10px; }
         }
     </style>
 </head>
@@ -288,7 +290,12 @@
                     <input type="range" id="saturationSlider" min="0" max="1" step="0.01" value="0.8">
                 </div>
 
-                <div class="section-title section-spacer">GRID SYSTEM</div>
+                <div class="section-title section-spacer">
+                    GRID SYSTEM
+                    <div class="mini-switch active" id="grid-toggle-btn" onclick="toggleGrid()">
+                        <div class="mini-indicator"></div>
+                    </div>
+                </div>
                 <div class="slider-group" id="grp-grid-size">
                     <div class="sync-dot"></div>
                     <div class="label-row"><label>Grid Zoom</label> <span class="value" id="val-grid-size">0.5</span></div>
@@ -306,13 +313,25 @@
                 </div>
                 <div class="slider-group" id="grp-3">
                     <div class="sync-dot"></div>
-                    <div class="label-row"><label>Particles</label> <span class="value" id="val-3">0.4</span></div>
+                    <div class="label-row">
+                        <label>Particles
+                            <div class="mini-switch active" id="part-toggle-btn" onclick="toggleParticles()">
+                                <div class="mini-indicator" style="width:8px; height:8px; top:2px; left:2px;"></div>
+                            </div>
+                        </label> 
+                        <span class="value" id="val-3">0.4</span>
+                    </div>
                     <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
                 </div>
             </div>
 
             <div class="col-right">
-                <div class="section-title">BORDER FX</div>
+                <div class="section-title">
+                    BORDER FX
+                    <div class="mini-switch active" id="border-toggle-btn" onclick="toggleBorder()">
+                        <div class="mini-indicator"></div>
+                    </div>
+                </div>
                 <div class="slider-group" id="grp-border-width">
                     <div class="sync-dot"></div>
                     <div class="label-row"><label>Width</label> <span class="value" id="val-border-width">0.0</span></div>
@@ -339,10 +358,21 @@
                 <div class="slider-group" style="margin-bottom:8px;">
                     <input type="text" id="yt-url" placeholder="YouTube ID/URL">
                     <div class="btn-row">
-                        <button class="small-btn" onclick="loadYouTube()">LOAD</button>
+                        <button class="small-btn" id="yt-load-btn" onclick="loadYouTube()">LOAD & PLAY</button>
                         <button class="small-btn" onclick="clearYouTube()">CLEAR</button>
-                        <div class="mini-switch" id="yt-interact-btn" onclick="toggleYTInteract()" title="Click Interact">
-                            <div class="mini-indicator"></div>
+                    </div>
+                    <div style="display:flex; justify-content: space-between; gap: 10px;">
+                        <div style="display:flex; justify-content: space-between; align-items: center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; flex:1;">
+                            <label style="margin:0; font-size:9px;">INTERACT</label>
+                            <div class="mini-switch" id="yt-interact-btn" onclick="toggleYTInteract()" title="Click Interact">
+                                <div class="mini-indicator"></div>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content: space-between; align-items: center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; flex:1;">
+                            <label style="margin:0; font-size:9px;">MUTE</label>
+                            <div class="mini-switch" id="yt-mute-btn" onclick="toggleYTMute()" title="Mute Toggle">
+                                <div class="mini-indicator"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -451,7 +481,8 @@
             imgX: 0.0, imgY: 0.0, imgVisible: true,
             borderWidth: 0.0, borderDensity: 5.0, borderAlpha: 0.8, borderDistortion: 0.5,
             ytSize: 0.5, ytOpacity: 0.5, ytBlend: 'normal', ytInteractive: false,
-            ytX: 0.0, ytY: 0.0
+            ytX: 0.0, ytY: 0.0, ytMuted: false,
+            gridVisible: true, particlesVisible: true, borderVisible: true
         },
         dynamicBorder: { width: 0.0, density: 5.0, alpha: 0.8, distortion: 0.5 },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
@@ -484,6 +515,11 @@
         uniform float u_drift; 
         uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
         uniform vec4 u_borderParams;
+        
+        uniform float u_showGrid;
+        uniform float u_showParticles;
+        uniform float u_showBorder;
+
         #define PI 3.14159265359
         mat2 rot2d(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
         float hash(vec2 p) { return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x)))); }
@@ -568,6 +604,9 @@
             float rawGrid = max(gridX, gridY);
             float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y * 3.0, 2.0) * (1.0 + u_bass * 0.8);
             structureIntensity += structureIntensity * lineNoise * 0.5; 
+            
+            structureIntensity *= u_showGrid;
+
             vec3 themeBG, themeStruct, themePart;
             float themeTime = liquid * 0.5 + u_time * 0.05;
             float themeBeat = u_bass * u_react;
@@ -607,6 +646,9 @@
             float borderLines = smoothstep(0.8, 0.9, pattern);
             float borderIntensity = borderLines * borderZone * u_borderParams.z * (1.0 + u_treble * u_react);
             borderIntensity *= opacityMod; 
+            
+            borderIntensity *= u_showBorder;
+
             float particleIntensity = 0.0;
             float particleGridScale = 6.0 + u_params.z * 10.0;
             vec2 pUV = mainUV * particleGridScale;
@@ -632,6 +674,9 @@
                 }
             }
             particleIntensity *= min(u_params.z * 2.0, 1.2); 
+            
+            particleIntensity *= u_showParticles;
+
             vec3 borderCol = themePart * borderIntensity; 
             vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) 
                            + (themeStruct * structureIntensity) 
@@ -657,7 +702,6 @@
         const el = document.getElementById(id);
         if (el) {
             el.value = val;
-            // Handle X/Y text manually
             if(id === 'imgXParam') document.getElementById('val-img-x').innerText = val.toFixed(2);
             else if(id === 'imgYParam') document.getElementById('val-img-y').innerText = val.toFixed(2);
             else if(id === 'ytXParam') document.getElementById('val-yt-x').innerText = val.toFixed(2);
@@ -690,6 +734,22 @@
         }
     }
 
+    window.toggleGrid = () => {
+        state.global.gridVisible = !state.global.gridVisible;
+        const btn = document.getElementById('grid-toggle-btn');
+        if(state.global.gridVisible) btn.classList.add('active'); else btn.classList.remove('active');
+    }
+    window.toggleParticles = () => {
+        state.global.particlesVisible = !state.global.particlesVisible;
+        const btn = document.getElementById('part-toggle-btn');
+        if(state.global.particlesVisible) btn.classList.add('active'); else btn.classList.remove('active');
+    }
+    window.toggleBorder = () => {
+        state.global.borderVisible = !state.global.borderVisible;
+        const btn = document.getElementById('border-toggle-btn');
+        if(state.global.borderVisible) btn.classList.add('active'); else btn.classList.remove('active');
+    }
+
     window.toggleImgVisibility = () => {
         state.global.imgVisible = !state.global.imgVisible;
         const btn = document.getElementById('img-toggle-btn');
@@ -710,8 +770,22 @@
         }
     }
 
+    window.toggleYTMute = () => {
+        state.global.ytMuted = !state.global.ytMuted;
+        const btn = document.getElementById('yt-mute-btn');
+        if(state.global.ytMuted) {
+            btn.classList.add('active');
+            if(ytPlayer && typeof ytPlayer.mute === 'function') ytPlayer.mute();
+        } else {
+            btn.classList.remove('active');
+            if(ytPlayer && typeof ytPlayer.unMute === 'function') ytPlayer.unMute();
+        }
+    }
+
     window.loadYouTube = () => {
-        if(!ytReady) return alert("YouTube API not ready yet. Please wait a moment.");
+        const btn = document.getElementById('yt-load-btn');
+        if(!ytReady) return alert("API not ready. Wait.");
+        
         let inputUrl = document.getElementById('yt-url').value;
         let vidId = "";
         let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
@@ -719,31 +793,51 @@
         if (match && match[2].length == 11) vidId = match[2];
         else vidId = inputUrl; 
 
-        if(vidId.length !== 11) return alert("Invalid YouTube URL/ID");
+        if(vidId.length !== 11) return alert("Invalid ID");
+
+        btn.innerText = "LOADING...";
+
+        const onPlayerError = (e) => {
+            alert("Error: Video cannot be played (restricted).");
+            btn.innerText = "LOAD & PLAY";
+        };
+
+        const onPlayerReady = (event) => {
+            // 2-step force play
+            event.target.mute();
+            event.target.playVideo();
+            setTimeout(() => {
+                if(!state.global.ytMuted) event.target.unMute();
+                btn.innerText = "PLAYING!";
+            }, 1000);
+        };
 
         if(ytPlayer) {
             ytPlayer.loadVideoById(vidId);
             ytPlayer.mute(); 
             ytPlayer.playVideo();
+            setTimeout(() => {
+                if(!state.global.ytMuted) ytPlayer.unMute();
+                btn.innerText = "PLAYING!";
+            }, 1000);
         } else {
             ytPlayer = new YT.Player('yt-player', {
                 height: '100%', width: '100%',
                 videoId: vidId,
                 playerVars: { 
-                    'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': vidId,
+                    'autoplay': 1, 'controls': 0, 'mute': 1, // Init mute for autoplay
+                    'loop': 1, 'playlist': vidId,
                     'origin': window.location.origin
                 },
                 events: {
-                    'onReady': (event) => { 
-                        event.target.mute(); 
-                        event.target.playVideo(); 
-                    }
+                    'onReady': onPlayerReady,
+                    'onError': onPlayerError
                 }
             });
         }
         updateYTStyles();
 
-        // Sync
+        // Sync: Restart Audio
         if(soundFile && soundFile.isLoaded()) {
             soundFile.jump(0);
             if(!soundFile.isPlaying()) soundFile.play();
@@ -756,6 +850,7 @@
             ytPlayer.stopVideo();
             document.getElementById('yt-player').innerHTML = "";
             ytPlayer = null;
+            document.getElementById('yt-load-btn').innerText = "LOAD & PLAY";
         }
     }
 
@@ -811,7 +906,6 @@
             if(el) {
                 el.addEventListener('input', (e) => {
                     let val = parseFloat(e.target.value);
-                    // --- MAPPING ---
                     if(id === 'param1') state.params[0] = val; 
                     else if(id === 'saturationSlider') state.global.saturation = val; 
                     else if(id === 'reactivity') state.global.react = val;
@@ -1014,7 +1108,6 @@
         let vol = amplitude.getLevel();
 
         if (!state.uiHidden) {
-            // Update viz to match new larger width
             const w = vizCtx.canvas.width;
             const h = vizCtx.canvas.height;
             vizCtx.clearRect(0, 0, w, h);
@@ -1108,6 +1201,10 @@
             state.dynamicBorder.alpha, 
             state.dynamicBorder.distortion
         ]);
+        
+        myShader.setUniform('u_showGrid', state.global.gridVisible ? 1.0 : 0.0);
+        myShader.setUniform('u_showParticles', state.global.particlesVisible ? 1.0 : 0.0);
+        myShader.setUniform('u_showBorder', state.global.borderVisible ? 1.0 : 0.0);
 
         rect(-width/2, -height/2, width, height);
 
@@ -1175,4 +1272,3 @@
 </script>
 </body>
 </html>
-](https://www.youtube.com/watch?v=WUR3qpsU7fY&list=RDWUR3qpsU7fY&start_radio=1)
