@@ -1,35 +1,33 @@
-[<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ: Optimized Lite</title>
+    <title>Aether VJ: White & Rainbow Control</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         /* --- Base Styling --- */
-        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: 'Helvetica Neue', sans-serif; color: #ccc; }
+        body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: 'Helvetica Neue', sans-serif; color: #ccc; }
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         canvas { display: block; position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
 
-        /* --- UI Layer (z-index 100+) --- */
+        /* --- UI Layer --- */
         #ui-container {
             position: fixed; inset: 0; pointer-events: none; z-index: 100;
             display: flex; flex-direction: column; justify-content: space-between;
             padding: 25px;
         }
 
-        /* Header */
         .header { display: flex; align-items: flex-start; justify-content: space-between; pointer-events: auto; }
-        .title-group { display: flex; flex-direction: column; gap: 8px; }
-        h1 { margin: 0; font-size: 11px; letter-spacing: 5px; opacity: 0.6; text-transform: uppercase; color: #fff; }
+        .title-group h1 { margin: 0; font-size: 11px; letter-spacing: 5px; opacity: 0.8; text-transform: uppercase; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
         /* Sync Switch */
         .sync-switch {
             display: inline-flex; align-items: center; gap: 8px;
             background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); pointer-events: auto;
         }
         .sync-switch:hover { background: rgba(255,255,255,0.1); }
         .sync-switch.active { background: rgba(0, 255, 255, 0.15); border-color: rgba(0, 255, 255, 0.5); box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
@@ -44,12 +42,11 @@
             pointer-events: auto;
             background: rgba(10,10,10,0.85); 
             backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 4px;
-            padding: 25px; width: 280px; align-self: flex-end;
-            margin-bottom: 120px;
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
+            padding: 20px; width: 280px; align-self: flex-end;
+            margin-bottom: 160px; 
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             z-index: 101;
         }
         .controls-panel.hidden { transform: translateX(calc(100% + 50px)); opacity: 0; pointer-events: none; }
@@ -62,9 +59,9 @@
         }
 
         /* Sliders */
-        .slider-group { margin-bottom: 22px; position: relative; }
-        .label-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 2px; font-weight: 500; }
+        .slider-group { margin-bottom: 18px; position: relative; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
         .value { font-size: 9px; font-family: 'Courier New', monospace; color: #bbb; }
         
         .sync-dot {
@@ -77,10 +74,10 @@
             width: 100%; -webkit-appearance: none; background: transparent; height: 20px; 
             cursor: pointer; margin: 0; touch-action: none; position: relative; z-index: 200; 
         }
-        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.15); border-radius: 2px;}
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.2); border-radius: 2px;}
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
-            background: #111; margin-top: -6px; box-shadow: 0 0 0 1px rgba(255,255,255,0.5); transition: transform 0.1s; 
+            background: #111; margin-top: -6px; box-shadow: 0 0 0 1px rgba(255,255,255,0.8); transition: transform 0.1s; 
         }
         input[type=range]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.2); }
 
@@ -96,21 +93,36 @@
         /* Bottom Bar */
         .bottom-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(5,5,5,0.95); border-top: 1px solid rgba(255,255,255,0.05);
+            background: rgba(10,10,10,0.95); border-top: 1px solid rgba(255,255,255,0.1);
             z-index: 101; display: flex; flex-direction: column; pointer-events: auto;
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(20px);
             padding-bottom: env(safe-area-inset-bottom);
         }
         .bottom-bar.hidden { transform: translateY(120%); }
 
+        /* YT Input Row */
+        .yt-input-row {
+            padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex; gap: 10px; align-items: center;
+        }
+        .yt-input {
+            flex-grow: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+            color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 11px; font-family: monospace;
+        }
+        .yt-input::placeholder { color: #555; }
+        .yt-load-btn {
+            background: #cc0000; color: #fff; border: none; padding: 8px 15px;
+            border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; letter-spacing: 1px; white-space: nowrap;
+        }
+        .yt-load-btn:hover { background: #ff0000; }
+
         /* File Controls */
         .file-controls {
-            padding: 15px 25px; display: flex; align-items: center; gap: 15px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding: 15px 20px; display: flex; align-items: center; gap: 15px;
         }
         .custom-file-btn {
             background: #222; border: 1px solid rgba(255,255,255,0.2); color: #fff;
-            padding: 10px 20px; border-radius: 20px; font-size: 11px; letter-spacing: 1px;
+            padding: 8px 16px; border-radius: 20px; font-size: 10px; letter-spacing: 1px;
             cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
             white-space: nowrap;
         }
@@ -121,23 +133,12 @@
             color: #000; display: flex; align-items: center; justify-content: center; cursor: pointer;
             display: none; font-weight: bold;
         }
-        .mic-mode-btn {
-            background: #005500;
-            border-color: #00ff00;
-            color: #00ff00;
-        }
-        .mic-mode-btn:active {
-            background: #00ff00;
-            color: #000;
-        }
+        .mic-mode-btn { background: #004400; border-color: #00ff00; color: #00ff00; }
 
-
-        /* YouTube Area */
+        /* YouTube Hidden Player */
         .youtube-area {
-            display: flex; align-items: center; padding: 10px 25px; gap: 15px; height: 50px;
-            opacity: 0.6; transition: opacity 0.3s;
+            position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none;
         }
-        .youtube-area:hover { opacity: 1.0; }
 
         /* Overlay */
         #overlay {
@@ -146,14 +147,11 @@
             cursor: pointer; color: #fff; transition: opacity 0.5s ease-out;
             pointer-events: auto;
         }
-        #overlay:active { background: #111; }
         .start-text { font-size: 14px; letter-spacing: 8px; font-weight: 300; margin-bottom: 20px; opacity: 0.9; text-align: center; pointer-events: none; }
         .sub-text { font-size: 10px; color: #0ff; letter-spacing: 2px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(0,255,255,0.3); pointer-events: none; }
 
         @media (max-width: 600px) {
-            .controls-panel { width: 100%; margin-bottom: 140px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
-            .file-controls { padding: 12px 15px; }
-            .youtube-area { display: none; } 
+            .controls-panel { width: 100%; margin-bottom: 160px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
         }
     </style>
 </head>
@@ -161,7 +159,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">TAP TO START</div>
-    <div class="sub-text">PERFORMANCE MODE</div>
+    <div class="sub-text">VISUALIZER CORE</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -182,53 +180,54 @@
 
         <div class="slider-group" id="grp-1">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Fluidity (Speed)</label> <span class="value" id="val-1">0.5</span></div>
+            <div class="label-row"><label>Flow (Speed)</label> <span class="value" id="val-1">0.5</span></div>
             <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
         </div>
         
         <div class="slider-group" id="grp-2">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Structure (Grid)</label> <span class="value" id="val-2">0.3</span></div>
+            <div class="label-row"><label>Grid (Structure)</label> <span class="value" id="val-2">0.3</span></div>
             <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
         </div>
         
         <div class="slider-group" id="grp-3">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Texture (Particles)</label> <span class="value" id="val-3">0.4</span></div>
+            <div class="label-row"><label>Float (Particles)</label> <span class="value" id="val-3">0.4</span></div>
             <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
         </div>
 
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 25px 0;">
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0;">
         
         <div class="slider-group">
-            <div class="label-row"><label>Audio Reactivity</label> <span class="value" id="val-react">1.5</span></div>
+            <div class="label-row"><label>Reactivity</label> <span class="value" id="val-react">1.5</span></div>
             <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
         </div>
         
         <div class="slider-group" id="grp-color">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Palette (Mono -> Deep Color)</label> <span class="value" id="val-color">0.2</span></div>
+            <div class="label-row"><label>Color (0=White, 1=Rainbow)</label> <span class="value" id="val-color">0.2</span></div>
             <input type="range" id="colorshift" min="0" max="1" step="0.01" value="0.2">
         </div>
     </div>
 </div>
 
 <div class="bottom-bar" id="btm-bar">
+    <div class="yt-input-row">
+        <input type="text" id="yt-url" class="yt-input" placeholder="YouTube URL (ex: https://youtu.be/...)">
+        <button class="yt-load-btn" onclick="loadYoutube()">LOAD YT</button>
+    </div>
+
     <div class="file-controls">
-        <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC MODE</button>
-        
-        <label for="audio-upload" class="custom-file-btn">
-            📂 LOAD FILE
-        </label>
+        <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC</button>
+        <label for="audio-upload" class="custom-file-btn">📂 FILE</label>
         <input type="file" id="audio-upload" accept=".mp3,audio/*" style="display:none" onchange="handleFileSelect(this)">
         
-        <div id="file-status">MIC ACTIVE</div>
+        <div id="file-status">MIC MODE</div>
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">❚❚</button>
     </div>
 
     <div class="youtube-area">
-        <div id="youtube-placeholder" style="width: 50px; height: 28px; background:#000; overflow:hidden;"><div id="player"></div></div>
-        <div style="flex-grow:1; font-size: 9px; color:#555;">YOUTUBE (NO SYNC ON MOBILE)</div>
+        <div id="player"></div>
     </div>
 </div>
 
@@ -255,9 +254,9 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- OPTIMIZED SHADER (LITE VERSION) ---
+    // --- SHADER: WHITE to RAINBOW CONTROL ---
     const frag = `
-        precision mediump float; // Changed to mediump for performance
+        precision mediump float;
         varying vec2 vTexCoord;
         uniform float u_time; uniform vec2 u_res;
         uniform vec3 u_params; 
@@ -276,38 +275,31 @@
             return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
         }
         
-        // REDUCED OCTAVES from 8 to 4
         float fbm(vec2 x, int oct) {
             float v = 0.0; float a = 0.5;
             vec2 shift = vec2(100.0);
             mat2 rot = rot2d(0.5);
-            for (int i = 0; i < 4; i++) { // Optimization: Reduced loop count
+            for (int i = 0; i < 4; i++) { 
                 if(i >= oct) break;
                 v += a * noise(x); x = rot * x * 2.0 + shift; a *= 0.5;
             }
             return v;
         }
 
-        vec3 getPalette(float t, float pVal, float bass, float mid) {
-            vec3 a = vec3(0.3, 0.3, 0.3);
-            vec3 b = vec3(0.3, 0.3, 0.3); 
+        // Rainbow Generator
+        vec3 getRainbow(float t) {
+            vec3 a = vec3(0.5, 0.5, 0.5);
+            vec3 b = vec3(0.5, 0.5, 0.5); 
             vec3 c = vec3(1.0, 1.0, 1.0);
-            vec3 d = vec3(0.0, 0.33, 0.67) + (pVal * vec3(0.5, 0.1, 0.0)); 
-            
-            vec3 col = a + b * cos( 6.28318 * (c * t * 0.5 + d) );
-            vec3 col2 = a + b * cos( 6.28318 * (c * t * 0.7 + d + vec3(0.2, 0.0, -0.1)) );
-            return mix(col, col2, mid * 0.3);
+            vec3 d = vec3(0.0, 0.33, 0.67) + u_time * 0.1; 
+            return a + b * cos( 6.28318 * (c * t + d) );
         }
 
-        float particle(vec2 uv, vec2 offset, float scale, float n, float z_pos) {
+        float particle(vec2 uv, vec2 offset, float scale, float z_pos) {
             vec2 pos = uv - offset;
             float d = length(pos);
-            // Simplified flicker calc
-            float flicker = hash(offset) * 0.3 + 0.7; 
-            
-            float size_scale = 1.0 / (1.0 + abs(z_pos * 0.5)); 
-            // Optimization: slightly simpler smoothstep
-            return 0.05 / (d + 0.01) * smoothstep(scale * size_scale, 0.0, d) * flicker; 
+            float size_scale = 1.0 / (1.0 + abs(z_pos * 0.8));
+            return 0.06 / (d + 0.005) * smoothstep(scale * size_scale, 0.0, d);
         }
 
         void main() {
@@ -318,89 +310,87 @@
             centered *= rot2d(u_rot * 0.05); 
             uv = centered + 0.5;
 
-            // Fluid - Optimization: Reduced FBM calls
+            // Fluid
             float speed = u_params.x * 0.2; 
-            float bassImpact = u_bass * u_react * 2.0; 
-            float warpStrength = 1.0 + u_params.x * 0.5 + bassImpact; 
+            float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
             
-            // Reduced to 2 octaves for warping coordinates
             vec2 q = vec2(fbm(uv + u_time * speed, 2), fbm(uv + vec2(5.2, 1.3) + u_time * speed, 2));
             vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.2, 2), 
-                          fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.2, 2));
-                                  
-            // Main liquid texture with 3 octaves
+                          fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.2, 2));         
             float liquid = fbm(uv + r * warpStrength, 3);
-            liquid = pow(smoothstep(0.1, 0.9, liquid), 1.5);
 
             // Grid
-            float gridScale = 4.0 + u_params.y * 35.0; 
-            vec2 gridUV = (uv + r * 0.05) * gridScale * (1.0 + liquid * 0.05 * u_params.y);
-            
-            float thick = 0.48; 
-            float gridLine = smoothstep(thick, 0.5, abs(fract(gridUV.x + u_time*0.02) - 0.5));
-            gridLine += smoothstep(thick, 0.5, abs(fract(gridUV.y - u_time*0.01) - 0.5));
-            float structure = gridLine * min(u_params.y, 0.8) * (1.0 + bassImpact * 0.3); 
+            float gridScale = 4.0 + u_params.y * 30.0; 
+            vec2 gridUV = (uv + r * 0.05) * gridScale;
+            float gridLine = smoothstep(0.48, 0.5, abs(fract(gridUV.x + u_time*0.02) - 0.5));
+            gridLine += smoothstep(0.48, 0.5, abs(fract(gridUV.y - u_time*0.01) - 0.5));
+            float structure = gridLine * min(u_params.y, 0.8) * (1.0 + u_bass * 0.3); 
 
-            // Particles (Optimized)
+            // Particles
             float particles = 0.0;
-            float particleGridScale = 8.0 + u_params.z * 15.0;
-            vec2 pUV = uv * particleGridScale;
+            vec3 particleColorAccum = vec3(0.0);
             
-            float global_flow_speed = 0.02 + u_vol * 0.05;
-            vec2 global_flow_offset = vec2(u_time * global_flow_speed, u_time * global_flow_speed * 0.3);
-            vec2 offset_pID = floor(pUV - global_flow_offset); 
-
+            float particleGridScale = 6.0 + u_params.z * 10.0;
+            vec2 pUV = uv * particleGridScale;
+            vec2 id = floor(pUV);
             pUV = fract(pUV) - 0.5;
 
             for(int y=-1; y<=1; y++) {
                 for(int x=-1; x<=1; x++) {
                     vec2 neighbor = vec2(float(x), float(y));
-                    vec2 id = offset_pID + neighbor;
-                    float n = hash(id);
+                    vec2 neighborID = id + neighbor;
+                    float n = hash(neighborID); 
                     
-                    float z_offset = hash(id + vec2(100.0));
-                    float z_pos = (2.0 * z_offset - 1.0) + sin(u_time * 0.3 + n * 5.0) * 0.5; 
+                    float t = u_time * (0.2 + n * 0.2); 
+                    float x_freq = 2.0 + n * 3.0;
+                    float y_freq = 2.0 + fract(n * 10.0) * 3.0;
                     
-                    float t = u_time * (0.1 + n * 0.1); 
+                    float posX = sin(t * x_freq + n * 10.0) * (0.6 + u_treble * u_react * 0.5);
+                    float posY = cos(t * y_freq + n * 20.0) * (0.6 + u_treble * u_react * 0.5);
+                    float z_pos = sin(t * 1.5 + n * 5.0) * 1.5; 
                     
-                    // Optimization: Pre-calculate commonly used sine waves if possible, 
-                    // but here we just keep it simple.
-                    float posX = sin(t + n * 6.28) * 2.5 + cos(t * 1.3 + n * 3.0) * 1.0;
-                    float posY = cos(t * 1.1 + n * 6.28) * 2.5 + sin(t * 1.7 + n * 4.0) * 1.0;
+                    vec2 pOffset = neighbor + vec2(posX, posY);
+                    float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * (1.0 + u_treble * u_react);
+                    float fade = smoothstep(2.0, -1.0, abs(z_pos));
                     
-                    float perspective_scale = 1.0 / (1.0 + z_pos * 0.5); 
-                    vec2 pOffset = (neighbor + vec2(posX, posY) - fract(global_flow_offset) ) * perspective_scale; 
+                    float pIntensity = particle(pUV, pOffset, pSize, z_pos) * fade;
                     
-                    float pSize = (0.08 + u_params.z * 0.15) * (1.0 + u_treble * u_react * 2.5) * n;
-                    particles += particle(pUV, pOffset, pSize, n, z_pos);
+                    // --- COLOR LOGIC: WHITE <-> RAINBOW MIX ---
+                    // Generate rainbow color for this particle
+                    vec3 rainbowCol = getRainbow(n + u_time * 0.2 + u_bass * 0.1); 
+                    
+                    // Pure White color
+                    vec3 whiteCol = vec3(0.9, 0.95, 1.0);
+                    
+                    // Mix based on u_paletteVal (Slider)
+                    // 0.0 = White, 1.0 = Rainbow
+                    vec3 pCol = mix(whiteCol, rainbowCol, u_paletteVal);
+                    
+                    particleColorAccum += pIntensity * pCol; 
+                    particles += pIntensity;
                 }
             }
-            particles *= min(u_params.z * 1.5, 1.0); 
+            particles *= min(u_params.z * 2.0, 1.2); 
 
-            // Mix
-            vec3 col = getPalette(liquid + u_bass * 0.1, u_paletteVal, u_bass, u_mid);
-            vec3 structCol = vec3(0.0, 0.8, 1.0) * (0.5 + u_bass*0.3) * (1.0 + u_paletteVal); 
-            col = mix(col, structCol * 1.0, structure * 0.7); 
-            col += vec3(particles * 1.2) * structCol; 
-
-            // Post Processing (Simplified)
-            vec3 finalCol = col;
-            float aber = u_vol * u_react * 0.015; 
-            finalCol.r = mix(col.r, col.r * 1.1, aber);
+            // Mix Final Color
+            // Background is subtle rainbow or white
+            vec3 bgRainbow = getRainbow(liquid * 0.5 + u_time * 0.05);
+            vec3 bgWhite = vec3(0.1);
+            vec3 bgCol = mix(bgWhite, bgRainbow, u_paletteVal) * (0.2 + liquid * 0.3);
             
-            float satFactor = smoothstep(0.0, 0.2, u_paletteVal);
-            // Optimized grayscale
-            float gray = dot(finalCol, vec3(0.3, 0.59, 0.11));
-            vec3 noirGray = vec3(pow(gray, 1.5)); // Simpler contrast
-            finalCol = mix(noirGray, finalCol, satFactor);
+            // Grid Color
+            vec3 gridCol = mix(vec3(0.3), vec3(0.0, 1.0, 1.0), u_paletteVal) * structure;
 
-            float vig = 1.0 - smoothstep(0.3, 1.8, length(vTexCoord - 0.5) * 1.5);
-            finalCol *= vig;
+            vec3 finalColor = bgCol + gridCol + particleColorAccum;
             
-            finalCol = finalCol / (finalCol + vec3(1.2)); 
-            finalCol = pow(finalCol, vec3(0.55)); // Approx 1.0/1.8
+            // Boost brightness on volume
+            finalColor += vec3(u_vol * u_react * 0.3); 
 
-            gl_FragColor = vec4(finalCol, 1.0);
+            // Tone Mapping
+            finalColor = finalColor / (finalColor + vec3(1.0)); 
+            finalColor = pow(finalColor, vec3(0.8)); 
+
+            gl_FragColor = vec4(finalColor, 1.0);
         }
     `;
 
@@ -408,21 +398,48 @@
     let player;
     function onYouTubeIframeAPIReady() {
         player = new YT.Player('player', {
-            height: '100%', width: '100%', videoId: 'jfKfPfyJRdk',
-            playerVars: { 'playsinline': 1, 'controls': 1 }
+            height: '100%', width: '100%', videoId: '', 
+            playerVars: { 'playsinline': 1, 'controls': 1, 'autoplay': 1 }, 
+            events: { 'onError': onPlayerError }
         });
+    }
+
+    function onPlayerError(event) {
+        console.error("YT Error:", event.data);
+        alert("YouTube再生エラー: 動画が再生できません。制限付き動画か、IDが間違っている可能性があります。");
+    }
+
+    function loadYoutube() {
+        let input = document.getElementById('yt-url').value;
+        const status = document.getElementById('file-status');
+        
+        let videoId = "";
+        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+        const match = input.match(regExp);
+        
+        if (match && match[7].length == 11) {
+            videoId = match[7];
+        } else if (input.length === 11) {
+            videoId = input;
+        }
+
+        if (videoId) {
+            if (soundFile && soundFile.isPlaying()) soundFile.stop();
+            mic.stop();
+            status.innerText = "YT: " + videoId;
+            player.loadVideoById(videoId);
+            player.playVideo(); 
+            alert("YouTubeをロードしました。\n【重要】\n1. マイクを許可してください（URLバーの鍵アイコン等から）。\n2. 端末のスピーカーから音を出してください。");
+            switchToMic(); 
+        } else {
+            alert("URLが無効です。");
+        }
     }
 
     // --- Setup ---
     function setup() {
         let cnv = createCanvas(windowWidth, windowHeight, WEBGL);
-        
-        // --- PERFORMANCE CRITICAL FIX ---
-        // Force pixel density to 1. This prevents Retina/High-DPI rendering 
-        // which kills performance on mobile shaders.
         pixelDensity(1); 
-        // -------------------------------
-
         cnv.style('z-index', '1'); 
         cnv.id('defaultCanvas0');
         noStroke();
@@ -459,8 +476,6 @@
         setTimeout(()=> ov.style.display='none', 500);
     }
 
-    // --- Audio Source Switching ---
-
     function switchToMic() {
         if (soundFile && soundFile.isPlaying()) {
             soundFile.stop();
@@ -469,7 +484,7 @@
         mic.start();
         fft.setInput(mic);
         amplitude.setInput(mic);
-        document.getElementById('file-status').innerText = "MIC ACTIVE";
+        document.getElementById('file-status').innerText = "MIC / YT MODE";
         if(!state.syncMode) toggleSync();
     }
     
@@ -479,15 +494,13 @@
         const statusEl = document.getElementById('file-status');
         
         if (file.size > MAX_FILE_SIZE) {
-            statusEl.innerText = "ERROR: FILE TOO LARGE (>20MB)";
-            alert("ファイルがデカすぎます（20MBまで）。別のファイルを選んでください。");
+            alert("ファイルが大きすぎます (20MB制限)");
             return;
         }
 
+        if(player && player.stopVideo) player.stopVideo();
         statusEl.innerText = "LOADING...";
-        if(soundFile && soundFile.isPlaying()) soundFile.stop();
-        if(player && player.pauseVideo) player.pauseVideo();
-
+        
         const blobUrl = URL.createObjectURL(file);
         soundFile = loadSound(blobUrl, () => {
             statusEl.innerText = file.name.toUpperCase();
@@ -501,8 +514,7 @@
             URL.revokeObjectURL(blobUrl);
         }, (err) => {
             console.error(err);
-            statusEl.innerText = "ERROR LOADING FILE";
-            alert("読み込みエラー: このファイル形式は利用できません。");
+            statusEl.innerText = "ERROR";
         });
     }
 
@@ -546,16 +558,11 @@
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
         let targetP = [0, 0, 0];
-        let targetPal = state.global.paletteVal;
-
+        
         if (state.syncMode) {
             targetP[0] = state.params[0] + (state.avgVol * 2.0); 
             targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
             targetP[2] = state.params[2] + (state.avgTreble * 2.0 * state.global.react);
-            
-            if (state.global.paletteVal > 0.15) {
-                targetPal = state.global.paletteVal + (state.avgMid * 0.2 * state.global.react) + (state.avgBass * 0.05);
-            }
             rotAccumulator += (0.0005 + state.avgVol * 0.05); 
         } else {
             targetP = [...state.params];
@@ -566,16 +573,14 @@
             state.dynamicParams[i] = lerp(state.dynamicParams[i], targetP[i], 0.05);
             state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
         }
-        state.global.dynPalette = lerp(state.global.dynPalette, targetPal, 0.02);
         
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
         myShader.setUniform('u_time', millis() / 1000.0);
         myShader.setUniform('u_params', state.dynamicParams);
         myShader.setUniform('u_react', state.global.react); 
-        myShader.setUniform('u_paletteVal', state.global.dynPalette);
+        myShader.setUniform('u_paletteVal', state.global.paletteVal);
         myShader.setUniform('u_rot', rotAccumulator);
-        
         myShader.setUniform('u_bass', state.avgBass); 
         myShader.setUniform('u_mid', state.avgMid);
         myShader.setUniform('u_treble', state.avgTreble);
@@ -611,4 +616,3 @@
 </script>
 </body>
 </html>
-](https://www.youtube.com/watch?v=jfKfPfyJRdk)
