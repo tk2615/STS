@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v6.6 Opacity</title>
+    <title>Aether VJ v6.7 Palette Morph</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -167,7 +167,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START</div>
+    <div class="sub-text">START v6.7</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -196,7 +196,7 @@
         </div>
 
         <div class="slider-group" style="margin-bottom: 12px;">
-            <div class="label-row"><label>Color Palette</label></div>
+            <div class="label-row"><label id="paletteLabel">Color Palette</label></div>
             <select id="paletteSelect">
                 <option value="0">Rainbow (Classic)</option>
                 <option value="1">Cyberpunk (Pk/Cy)</option>
@@ -298,13 +298,13 @@
         global: { 
             react: 1.5, gridSize: 0.5, lineWeight: 0.3, 
             saturation: 0.8, colorMode: 0, 
-            rot: 0.0, 
-            imgSize: 0.5, imgOpacity: 1.0, // Added Opacity
+            rot: 0.0, imgSize: 0.5, imgOpacity: 1.0, 
             imgX: 0.0, imgY: 0.0, imgVisible: true
         },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0,
-        drift: 0 
+        drift: 0,
+        paletteTime: 0 // Tracks accumulated time/beat for palette morphing
     };
 
     let myShader, fft, amplitude, mic;
@@ -317,6 +317,7 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
+    // --- SHADER: PALETTE MORPHING ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
@@ -325,6 +326,8 @@
         uniform float u_react; 
         uniform float u_saturation; 
         uniform int u_colorMode;    
+        uniform float u_useAutoPalette; // 1.0 = Cycle, 0.0 = Manual
+        uniform float u_paletteTime;    // Accumulated time for cycling
         uniform float u_gridSize; 
         uniform float u_lineWeight; 
         uniform float u_drift; 
@@ -361,25 +364,26 @@
             return a + b * cos( 6.28318 * (c * t + d) );
         }
 
-        void getColorTheme(int mode, float t, float audioBoost, out vec3 colBG, out vec3 colStruct, out vec3 colPart) {
+        // Get specific theme colors
+        void getThemeColors(int mode, float t, float audioBoost, out vec3 colBG, out vec3 colStruct, out vec3 colPart) {
             float beat = audioBoost * 0.5;
-            if (mode == 0) { 
+            if (mode == 0) { // Rainbow
                  colBG = getRainbow(t + beat * 0.2, u_drift * 0.1);
                  colStruct = vec3(0.2, 0.9, 1.0) + beat * 0.3; 
                  colPart = getRainbow(t + 0.5 + beat * 0.3, 0.1);
-            } else if (mode == 1) { 
+            } else if (mode == 1) { // Cyberpunk
                  colBG = mix(vec3(0.1, 0.0, 0.2), vec3(0.6, 0.0, 0.5), sin(t + beat)*0.5+0.5);
                  colStruct = vec3(0.0, 0.9, 1.0) * (1.0 + beat);
                  colPart = vec3(1.0, 0.2, 0.6) + beat * 0.5;
-            } else if (mode == 2) { 
+            } else if (mode == 2) { // Heatwave
                  colBG = mix(vec3(0.2, 0.0, 0.0), vec3(0.5, 0.1, 0.0), sin(t*0.7 + beat)*0.5+0.5);
                  colStruct = vec3(1.0, 0.5 + beat*0.5, 0.0); 
                  colPart = vec3(1.0, 0.8, 0.2) * (1.0 + beat*2.0);
-            } else if (mode == 3) { 
+            } else if (mode == 3) { // Deep Ocean
                  colBG = mix(vec3(0.0, 0.05, 0.2), vec3(0.0, 0.2, 0.4), sin(t*0.5 + beat*0.2)*0.5+0.5);
                  colStruct = vec3(0.0, 0.7, 0.8) * (0.8 + beat*0.4);
                  colPart = vec3(0.4, 1.0, 0.9) + beat;
-            } else { 
+            } else { // Forest
                  colBG = mix(vec3(0.0, 0.2, 0.05), vec3(0.1, 0.4, 0.1), sin(t*0.6 + beat*0.3)*0.5+0.5);
                  colStruct = vec3(0.2, 0.9, 0.3) * (1.0 + beat*0.5);
                  colPart = vec3(0.7, 1.0, 0.2) + beat;
@@ -401,6 +405,7 @@
             centered *= rot2d(u_rot * 0.05 + u_drift * 0.1); 
             uv = centered + 0.5;
 
+            // --- PATTERN GEN ---
             float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
             vec2 q = vec2(fbm(uv + u_time * 0.5 + u_drift, 2), fbm(uv + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
             vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
@@ -440,29 +445,46 @@
                     vec2 neighbor = vec2(float(x), float(y));
                     vec2 neighborID = id + neighbor;
                     float n = hash(neighborID); 
-                    
                     float t = u_time * (0.8 + n * 0.5) + u_drift * n;
                     float x_freq = 2.0 + n * 3.0;
                     float y_freq = 2.0 + fract(n * 10.0) * 3.0;
-                    
                     float shake = min(u_treble * u_react, 0.4);
-                    
                     float posX = sin(t * x_freq + n * 10.0) * (0.6 + shake);
                     float posY = cos(t * y_freq + n * 20.0) * (0.6 + shake);
                     float z_pos = sin(t * 1.5 + n * 5.0) * 1.5; 
                     vec2 pOffset = neighbor + vec2(posX, posY);
-                    
                     float sizeBoost = 1.0 + shake * 2.0;
                     float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * sizeBoost;
-                    
                     float fade = smoothstep(2.0, -1.0, abs(z_pos));
                     particleIntensity += particle(pUV, pOffset, pSize, z_pos) * fade;
                 }
             }
             particleIntensity *= min(u_params.z * 2.0, 1.2); 
 
+            // --- PALETTE MORPHING LOGIC ---
             vec3 themeBG, themeStruct, themePart;
-            getColorTheme(u_colorMode, liquid * 0.5 + u_time * 0.05, u_bass * u_react, themeBG, themeStruct, themePart);
+            float themeTime = liquid * 0.5 + u_time * 0.05;
+            float themeBeat = u_bass * u_react;
+
+            if (u_useAutoPalette > 0.5) {
+                // Auto Cycle Mode (Mix two palettes)
+                int modeA = int(mod(u_paletteTime, 5.0));
+                int modeB = int(mod(u_paletteTime + 1.0, 5.0));
+                float mixFactor = fract(u_paletteTime); // 0.0 to 1.0 transition
+
+                vec3 bg1, st1, pt1;
+                vec3 bg2, st2, pt2;
+                
+                getThemeColors(modeA, themeTime, themeBeat, bg1, st1, pt1);
+                getThemeColors(modeB, themeTime, themeBeat, bg2, st2, pt2);
+                
+                themeBG = mix(bg1, bg2, mixFactor);
+                themeStruct = mix(st1, st2, mixFactor);
+                themePart = mix(pt1, pt2, mixFactor);
+            } else {
+                // Manual Mode
+                getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
+            }
 
             vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) + (themeStruct * structureIntensity) + (themePart * particleIntensity);
 
@@ -552,7 +574,7 @@
                     else if(id === 'gridLine') state.global.lineWeight = val; 
                     else if(id === 'param2') state.params[1] = val; 
                     else if(id === 'imgSizeParam') state.global.imgSize = val; 
-                    else if(id === 'imgOpacityParam') state.global.imgOpacity = val; // NEW
+                    else if(id === 'imgOpacityParam') state.global.imgOpacity = val; 
                     else if(id === 'imgXParam') state.global.imgX = val; 
                     else if(id === 'imgYParam') state.global.imgY = val; 
                     else if(id === 'reactivity') state.global.react = val; 
@@ -610,7 +632,6 @@
         });
     }
 
-    // Simple Image Handler (GIF logic removed)
     function handleImageSelect(fileInput) {
         if (fileInput.files.length === 0) return;
         const file = fileInput.files[0];
@@ -673,6 +694,12 @@
         state.customTime += baseSpeed + audioSpeedBoost;
         state.drift += 0.002; 
 
+        // Accumulate Palette Cycle Time if Sync is ON
+        if (state.syncMode) {
+            // Speed of cycle depends on volume + small base drift
+            state.paletteTime += 0.005 + (state.avgBass * 0.05);
+        }
+
         let targetP = [0, 0, 0];
         if (state.syncMode) {
             targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
@@ -698,6 +725,11 @@
         myShader.setUniform('u_react', state.global.react); 
         myShader.setUniform('u_saturation', state.global.saturation); 
         myShader.setUniform('u_colorMode', state.global.colorMode); 
+        
+        // Send Sync Palette State
+        myShader.setUniform('u_useAutoPalette', state.syncMode ? 1.0 : 0.0);
+        myShader.setUniform('u_paletteTime', state.paletteTime);
+
         myShader.setUniform('u_gridSize', state.global.gridSize); 
         myShader.setUniform('u_lineWeight', state.global.lineWeight); 
         myShader.setUniform('u_rot', rotAccumulator);
@@ -707,7 +739,7 @@
         myShader.setUniform('u_vol', state.avgVol);
         rect(-width/2, -height/2, width, height);
 
-        // 2. Draw Image Plane (Force on top) with Opacity
+        // 2. Draw Image Plane
         if (centerImg && state.global.imgVisible) {
             if (centerImg.width > 0) {
                 resetShader(); 
@@ -733,13 +765,12 @@
                     displayW = displayH * aspect;
                 }
 
-                // APPLY OPACITY using tint()
+                // APPLY OPACITY
                 tint(255, state.global.imgOpacity * 255);
-                
+
                 texture(centerImg);
                 noStroke();
                 plane(displayW, displayH);
-                
                 gl.enable(gl.DEPTH_TEST);
                 pop();
             }
@@ -758,13 +789,16 @@
         state.syncMode = !state.syncMode;
         const btn = document.getElementById('sync-btn');
         const lbl = btn.querySelector('.switch-label');
+        const palLabel = document.getElementById('paletteLabel');
         if(state.syncMode) {
             btn.classList.add('active'); 
             lbl.innerText = "AUDIO SYNC: ON";
+            palLabel.innerText = "Color Palette (CYCLING)";
             document.querySelectorAll('.slider-group').forEach(el => el.classList.add('sync-active'));
         } else {
             btn.classList.remove('active'); 
             lbl.innerText = "AUDIO SYNC: OFF";
+            palLabel.innerText = "Color Palette";
             document.querySelectorAll('.slider-group').forEach(el => el.classList.remove('sync-active'));
         }
     };
