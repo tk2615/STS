@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v6.7 Palette Morph</title>
+    <title>Aether VJ v7.2 Dynamic Flow</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -167,7 +167,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START v6.7</div>
+    <div class="sub-text">START</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -191,7 +191,7 @@
 
         <div class="slider-group" id="grp-1">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Flow (Speed)</label> <span class="value" id="val-1">0.5</span></div>
+            <div class="label-row"><label>Flow (Speed Limit)</label> <span class="value" id="val-1">0.5</span></div>
             <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
         </div>
 
@@ -234,6 +234,28 @@
             <div class="sync-dot"></div>
             <div class="label-row"><label>Grid (Distortion)</label> <span class="value" id="val-2">0.3</span></div>
             <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+        
+        <label style="color:#0ff; margin-bottom:8px; display:block;">BORDER FX</label>
+        
+        <div class="slider-group" id="grp-border-width">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Border Width</label> <span class="value" id="val-border-width">0.0</span></div>
+            <input type="range" id="borderWidth" min="0" max="0.5" step="0.01" value="0.0">
+        </div>
+
+        <div class="slider-group" id="grp-border-density">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Border Density</label> <span class="value" id="val-border-density">5.0</span></div>
+            <input type="range" id="borderDensity" min="1" max="20" step="0.1" value="5.0">
+        </div>
+
+        <div class="slider-group" id="grp-border-alpha">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Border Alpha</label> <span class="value" id="val-border-alpha">0.8</span></div>
+            <input type="range" id="borderAlpha" min="0" max="1" step="0.01" value="0.8">
         </div>
 
         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
@@ -299,12 +321,16 @@
             react: 1.5, gridSize: 0.5, lineWeight: 0.3, 
             saturation: 0.8, colorMode: 0, 
             rot: 0.0, imgSize: 0.5, imgOpacity: 1.0, 
-            imgX: 0.0, imgY: 0.0, imgVisible: true
+            imgX: 0.0, imgY: 0.0, imgVisible: true,
+            // Border Params
+            borderWidth: 0.0, borderDensity: 5.0, borderAlpha: 0.8
         },
+        // Dynamic Border Params for Sync
+        dynamicBorder: { width: 0.0, density: 5.0, alpha: 0.8 },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0,
         drift: 0,
-        paletteTime: 0 // Tracks accumulated time/beat for palette morphing
+        paletteTime: 0
     };
 
     let myShader, fft, amplitude, mic;
@@ -317,7 +343,7 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- SHADER: PALETTE MORPHING ---
+    // --- SHADER: PALETTE MORPHING + WAVING BROKEN BORDER ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
@@ -326,12 +352,14 @@
         uniform float u_react; 
         uniform float u_saturation; 
         uniform int u_colorMode;    
-        uniform float u_useAutoPalette; // 1.0 = Cycle, 0.0 = Manual
-        uniform float u_paletteTime;    // Accumulated time for cycling
+        uniform float u_useAutoPalette; 
+        uniform float u_paletteTime;    
         uniform float u_gridSize; 
         uniform float u_lineWeight; 
         uniform float u_drift; 
         uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
+        
+        uniform vec3 u_borderParams; // x=width, y=density, z=alpha
         
         #define PI 3.14159265359
         mat2 rot2d(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
@@ -364,7 +392,6 @@
             return a + b * cos( 6.28318 * (c * t + d) );
         }
 
-        // Get specific theme colors
         void getThemeColors(int mode, float t, float audioBoost, out vec3 colBG, out vec3 colStruct, out vec3 colPart) {
             float beat = audioBoost * 0.5;
             if (mode == 0) { // Rainbow
@@ -402,20 +429,22 @@
             vec2 uv = vTexCoord;
             uv.x *= u_res.x / u_res.y;
             vec2 centered = uv - 0.5;
+            
+            // --- GLOBAL ROTATION ---
             centered *= rot2d(u_rot * 0.05 + u_drift * 0.1); 
-            uv = centered + 0.5;
+            vec2 mainUV = centered + 0.5;
 
             // --- PATTERN GEN ---
             float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
-            vec2 q = vec2(fbm(uv + u_time * 0.5 + u_drift, 2), fbm(uv + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
-            vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
-                          fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));          
-            float liquid = fbm(uv + r * warpStrength, 3);
+            vec2 q = vec2(fbm(mainUV + u_time * 0.5 + u_drift, 2), fbm(mainUV + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
+            vec2 r = vec2(fbm(mainUV + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
+                          fbm(mainUV + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));                       
+            float liquid = fbm(mainUV + r * warpStrength, 3);
 
-            float ripple = fbm(uv * 4.0 + u_time + u_drift, 2);
+            float ripple = fbm(mainUV * 4.0 + u_time + u_drift, 2);
             vec2 organicShift = vec2(ripple, ripple) * u_bass * u_react * 0.8; 
             float userGridScale = 2.0 + u_gridSize * 48.0; 
-            vec2 gridUV = (uv + r * 0.05 + organicShift) * userGridScale;
+            vec2 gridUV = (mainUV + r * 0.05 + organicShift) * userGridScale;
             gridUV.x += sin(gridUV.y * 0.5 + u_time * 2.0) * u_vol * u_react * 0.8; 
             
             float lineNoise = fbm(gridUV * 0.1 + u_time * 0.2, 2);
@@ -434,9 +463,64 @@
             float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y, 1.5) * (1.0 + u_bass * 0.8);
             structureIntensity += structureIntensity * lineNoise * 0.5; 
 
+            // --- PALETTE ---
+            vec3 themeBG, themeStruct, themePart;
+            float themeTime = liquid * 0.5 + u_time * 0.05;
+            float themeBeat = u_bass * u_react;
+
+            if (u_useAutoPalette > 0.5) {
+                int modeA = int(mod(u_paletteTime, 5.0));
+                int modeB = int(mod(u_paletteTime + 1.0, 5.0));
+                float mixFactor = fract(u_paletteTime);
+                vec3 bg1, st1, pt1; vec3 bg2, st2, pt2;
+                getThemeColors(modeA, themeTime, themeBeat, bg1, st1, pt1);
+                getThemeColors(modeB, themeTime, themeBeat, bg2, st2, pt2);
+                themeBG = mix(bg1, bg2, mixFactor);
+                themeStruct = mix(st1, st2, mixFactor);
+                themePart = mix(pt1, pt2, mixFactor);
+            } else {
+                getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
+            }
+
+            // --- BORDER FX: WAVING & GLITCH ---
+            vec2 borderUV = centered; // Center (0,0)
+            
+            // 1. WAVING DISTORTION
+            // Create random waving based on time and audio
+            if (u_react > 0.1) {
+                float waveFreq = 10.0;
+                float waveAmp = u_bass * u_react * 0.15; // Amount of wave
+                float randomOffset = fbm(borderUV * 2.0 + u_time, 2); // Random noise
+                float waveX = sin(borderUV.y * waveFreq + u_time * 5.0 + randomOffset * 5.0) * waveAmp;
+                float waveY = cos(borderUV.x * waveFreq + u_time * 4.0 - randomOffset * 5.0) * waveAmp;
+                borderUV += vec2(waveX, waveY);
+            }
+            
+            vec2 absUV = abs(borderUV);
+            float dX = (u_res.x/u_res.y)*0.5 - absUV.x;
+            float dY = 0.5 - absUV.y;
+            float edgeDist = min(dX, dY);
+            
+            // 2. TRANSPARENCY NOISE (Glitch)
+            // Use angle and distance to create a noise mask
+            float angle = atan(borderUV.y, borderUV.x);
+            float noiseMask = fbm(vec2(angle * 6.0, edgeDist * 20.0 - u_time * 2.0), 2);
+            // Threshold to create "holes" in the border
+            float opacityMod = smoothstep(0.3, 0.6, noiseMask); 
+            
+            float borderZone = smoothstep(u_borderParams.x + 0.01, u_borderParams.x, edgeDist); 
+            float move = u_time * 3.0 + u_bass * u_react * 2.0;
+            float pattern = sin(edgeDist * (50.0 + u_borderParams.y * 100.0) + move);
+            float borderLines = smoothstep(0.8, 0.9, pattern);
+            
+            // Combine: Lines * Zone * Alpha * OpacityNoise
+            float borderIntensity = borderLines * borderZone * u_borderParams.z * (1.0 + u_treble * u_react);
+            borderIntensity *= opacityMod; // APPLY NOISE MASK
+
+            // --- PARTICLES ---
             float particleIntensity = 0.0;
             float particleGridScale = 6.0 + u_params.z * 10.0;
-            vec2 pUV = uv * particleGridScale;
+            vec2 pUV = mainUV * particleGridScale;
             vec2 id = floor(pUV);
             pUV = fract(pUV) - 0.5;
 
@@ -461,32 +545,13 @@
             }
             particleIntensity *= min(u_params.z * 2.0, 1.2); 
 
-            // --- PALETTE MORPHING LOGIC ---
-            vec3 themeBG, themeStruct, themePart;
-            float themeTime = liquid * 0.5 + u_time * 0.05;
-            float themeBeat = u_bass * u_react;
-
-            if (u_useAutoPalette > 0.5) {
-                // Auto Cycle Mode (Mix two palettes)
-                int modeA = int(mod(u_paletteTime, 5.0));
-                int modeB = int(mod(u_paletteTime + 1.0, 5.0));
-                float mixFactor = fract(u_paletteTime); // 0.0 to 1.0 transition
-
-                vec3 bg1, st1, pt1;
-                vec3 bg2, st2, pt2;
-                
-                getThemeColors(modeA, themeTime, themeBeat, bg1, st1, pt1);
-                getThemeColors(modeB, themeTime, themeBeat, bg2, st2, pt2);
-                
-                themeBG = mix(bg1, bg2, mixFactor);
-                themeStruct = mix(st1, st2, mixFactor);
-                themePart = mix(pt1, pt2, mixFactor);
-            } else {
-                // Manual Mode
-                getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
-            }
-
-            vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) + (themeStruct * structureIntensity) + (themePart * particleIntensity);
+            // --- COMPOSITING ---
+            vec3 borderCol = themePart * borderIntensity; 
+            
+            vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) 
+                           + (themeStruct * structureIntensity) 
+                           + (themePart * particleIntensity)
+                           + borderCol;
 
             float luminance = dot(fullColor, vec3(0.299, 0.587, 0.114));
             vec3 monoColor = vec3(luminance) * 1.2; 
@@ -562,7 +627,13 @@
              state.global.colorMode = parseInt(e.target.value);
         });
 
-        ['param1', 'saturationSlider', 'param3', 'gridSize', 'gridLine', 'param2', 'imgSizeParam', 'imgOpacityParam', 'imgXParam', 'imgYParam', 'reactivity'].forEach((id) => {
+        const controls = [
+            'param1', 'saturationSlider', 'param3', 'gridSize', 'gridLine', 'param2', 
+            'imgSizeParam', 'imgOpacityParam', 'imgXParam', 'imgYParam', 'reactivity',
+            'borderWidth', 'borderDensity', 'borderAlpha'
+        ];
+
+        controls.forEach((id) => {
             const el = document.getElementById(id);
             if(el) {
                 el.addEventListener('input', (e) => {
@@ -577,7 +648,11 @@
                     else if(id === 'imgOpacityParam') state.global.imgOpacity = val; 
                     else if(id === 'imgXParam') state.global.imgX = val; 
                     else if(id === 'imgYParam') state.global.imgY = val; 
-                    else if(id === 'reactivity') state.global.react = val; 
+                    else if(id === 'reactivity') state.global.react = val;
+                    else if(id === 'borderWidth') state.global.borderWidth = val;
+                    else if(id === 'borderDensity') state.global.borderDensity = val;
+                    else if(id === 'borderAlpha') state.global.borderAlpha = val;
+
                     e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
                 });
             }
@@ -689,23 +764,49 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
-        let baseSpeed = state.params[0] * 0.02; 
-        let audioSpeedBoost = state.avgVol * 0.2 * state.global.react; 
-        state.customTime += baseSpeed + audioSpeedBoost;
-        state.drift += 0.002; 
+        // --- NEW TIME/FLOW LOGIC ---
+        // Flow Slider (0.0 to 1.0)
+        let speedVal = state.params[0]; 
+        let increment = 0;
 
-        // Accumulate Palette Cycle Time if Sync is ON
         if (state.syncMode) {
-            // Speed of cycle depends on volume + small base drift
+            // SYNC ON: Bass drives speed.
+            // speedVal acts as a multiplier/limiter.
+            // When music stops, it drifts very slowly.
+            let minDrift = speedVal * 0.005; 
+            // Kick (Bass) triggers larger jumps in time
+            let dynamicJump = speedVal * 0.06 * pow(state.avgBass, 2.0) * state.global.react;
+            increment = minDrift + dynamicJump;
+            
+            state.drift += 0.002 + (state.avgBass * 0.01); // Drift also reacts slightly
             state.paletteTime += 0.005 + (state.avgBass * 0.05);
+        } else {
+            // SYNC OFF: Standard constant speed
+            let baseSpeed = speedVal * 0.02;
+            let audioBoost = state.avgVol * 0.2 * state.global.react;
+            increment = baseSpeed + audioBoost;
+            state.drift += 0.002;
         }
+        
+        state.customTime += increment;
 
         let targetP = [0, 0, 0];
+        let targetBorder = { 
+            width: state.global.borderWidth, 
+            density: state.global.borderDensity, 
+            alpha: state.global.borderAlpha 
+        };
+
         if (state.syncMode) {
             targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
             targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
             targetP[2] = Math.min(1.0, state.params[2] + (state.avgTreble * 1.5 * state.global.react)); 
             rotAccumulator += (0.0005 + state.avgVol * 0.05); 
+            
+            if (state.global.borderWidth > 0.01) {
+                targetBorder.width = state.global.borderWidth + (state.avgBass * 0.1 * state.global.react);
+                targetBorder.alpha = Math.min(1.0, state.global.borderAlpha + (state.avgTreble * 0.2));
+            }
         } else {
             targetP = [...state.params];
             rotAccumulator += 0.0005;
@@ -715,7 +816,11 @@
             state.dynamicParams[i] = lerp(state.dynamicParams[i], targetP[i], 0.05);
             state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
         }
-        
+
+        state.dynamicBorder.width = lerp(state.dynamicBorder.width, targetBorder.width, 0.1);
+        state.dynamicBorder.density = lerp(state.dynamicBorder.density, targetBorder.density, 0.1);
+        state.dynamicBorder.alpha = lerp(state.dynamicBorder.alpha, targetBorder.alpha, 0.1);
+
         // 1. Draw Background
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
@@ -726,7 +831,6 @@
         myShader.setUniform('u_saturation', state.global.saturation); 
         myShader.setUniform('u_colorMode', state.global.colorMode); 
         
-        // Send Sync Palette State
         myShader.setUniform('u_useAutoPalette', state.syncMode ? 1.0 : 0.0);
         myShader.setUniform('u_paletteTime', state.paletteTime);
 
@@ -737,6 +841,9 @@
         myShader.setUniform('u_mid', state.avgMid);
         myShader.setUniform('u_treble', state.avgTreble);
         myShader.setUniform('u_vol', state.avgVol);
+
+        myShader.setUniform('u_borderParams', [state.dynamicBorder.width, state.dynamicBorder.density, state.dynamicBorder.alpha]);
+
         rect(-width/2, -height/2, width, height);
 
         // 2. Draw Image Plane
@@ -765,7 +872,6 @@
                     displayW = displayH * aspect;
                 }
 
-                // APPLY OPACITY
                 tint(255, state.global.imgOpacity * 255);
 
                 texture(centerImg);
