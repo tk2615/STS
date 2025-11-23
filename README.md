@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ: White & Rainbow Control</title>
+    <title>Aether VJ: Sensitive Color v4 (Key Ctrl)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
         /* --- Base Styling --- */
         body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: 'Helvetica Neue', sans-serif; color: #ccc; }
@@ -21,11 +20,20 @@
         }
 
         .header { display: flex; align-items: flex-start; justify-content: space-between; pointer-events: auto; }
+        .title-group { display: flex; flex-direction: column; gap: 10px; }
+        .title-row { display: flex; align-items: center; gap: 15px; }
         .title-group h1 { margin: 0; font-size: 11px; letter-spacing: 5px; opacity: 0.8; text-transform: uppercase; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
+        .reload-btn {
+            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+            color: #fff; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px;
+            transition: all 0.2s;
+        }
+        .reload-btn:hover { background: rgba(255,255,255,0.3); }
+
         /* Sync Switch */
         .sync-switch {
-            display: inline-flex; align-items: center; gap: 8px;
+            display: inline-flex; align-items: center; gap: 8px; width: fit-content;
             background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
             cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); pointer-events: auto;
         }
@@ -44,22 +52,20 @@
             backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
             border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
             padding: 20px; width: 280px; align-self: flex-end;
-            margin-bottom: 160px; 
+            margin-bottom: 100px;
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             z-index: 101;
         }
         .controls-panel.hidden { transform: translateX(calc(100% + 50px)); opacity: 0; pointer-events: none; }
 
-        /* Visualizer Canvas */
         #viz-canvas {
             width: 100%; height: 40px; background: rgba(0,0,0,0.3);
             border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
             border-radius: 2px; display: block;
         }
 
-        /* Sliders */
-        .slider-group { margin-bottom: 18px; position: relative; }
+        .slider-group { margin-bottom: 16px; position: relative; }
         .label-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
         label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
         .value { font-size: 9px; font-family: 'Courier New', monospace; color: #bbb; }
@@ -81,7 +87,6 @@
         }
         input[type=range]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.2); }
 
-        /* Toggle Button */
         .toggle-btn-fixed {
             position: fixed; top: 25px; right: 25px; z-index: 200; pointer-events: auto;
             width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -90,7 +95,6 @@
         }
         .toggle-btn-fixed:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
 
-        /* Bottom Bar */
         .bottom-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
             background: rgba(10,10,10,0.95); border-top: 1px solid rgba(255,255,255,0.1);
@@ -100,47 +104,24 @@
         }
         .bottom-bar.hidden { transform: translateY(120%); }
 
-        /* YT Input Row */
-        .yt-input-row {
-            padding: 10px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
-            display: flex; gap: 10px; align-items: center;
-        }
-        .yt-input {
-            flex-grow: 1; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
-            color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 11px; font-family: monospace;
-        }
-        .yt-input::placeholder { color: #555; }
-        .yt-load-btn {
-            background: #cc0000; color: #fff; border: none; padding: 8px 15px;
-            border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; letter-spacing: 1px; white-space: nowrap;
-        }
-        .yt-load-btn:hover { background: #ff0000; }
-
-        /* File Controls */
         .file-controls {
-            padding: 15px 20px; display: flex; align-items: center; gap: 15px;
+            padding: 20px; display: flex; align-items: center; gap: 15px; justify-content: center;
         }
         .custom-file-btn {
             background: #222; border: 1px solid rgba(255,255,255,0.2); color: #fff;
-            padding: 8px 16px; border-radius: 20px; font-size: 10px; letter-spacing: 1px;
+            padding: 10px 20px; border-radius: 30px; font-size: 11px; letter-spacing: 1px;
             cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
             white-space: nowrap;
         }
         .custom-file-btn:active { transform: scale(0.95); background: #fff; color: #000; }
-        #file-status { font-size: 10px; color: #888; font-family: 'Courier New', monospace; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        #file-status { font-size: 11px; color: #0ff; font-family: 'Courier New', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; text-align: center;}
         .play-pause-btn {
-            width: 35px; height: 35px; border-radius: 50%; background: #0ff; border: none;
+            width: 40px; height: 40px; border-radius: 50%; background: #0ff; border: none;
             color: #000; display: flex; align-items: center; justify-content: center; cursor: pointer;
-            display: none; font-weight: bold;
+            display: none; font-weight: bold; font-size: 16px;
         }
         .mic-mode-btn { background: #004400; border-color: #00ff00; color: #00ff00; }
 
-        /* YouTube Hidden Player */
-        .youtube-area {
-            position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none;
-        }
-
-        /* Overlay */
         #overlay {
             position: fixed; inset: 0; background: #000; z-index: 9999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -150,8 +131,16 @@
         .start-text { font-size: 14px; letter-spacing: 8px; font-weight: 300; margin-bottom: 20px; opacity: 0.9; text-align: center; pointer-events: none; }
         .sub-text { font-size: 10px; color: #0ff; letter-spacing: 2px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(0,255,255,0.3); pointer-events: none; }
 
+        /* Keyboard Tip */
+        .key-tip {
+            position: absolute; bottom: 80px; width: 100%; text-align: center; 
+            font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 1px; pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .bottom-bar.hidden ~ .key-tip { opacity: 0; }
+
         @media (max-width: 600px) {
-            .controls-panel { width: 100%; margin-bottom: 160px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
+            .controls-panel { width: 100%; margin-bottom: 100px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
         }
     </style>
 </head>
@@ -159,7 +148,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">TAP TO START</div>
-    <div class="sub-text">VISUALIZER CORE</div>
+    <div class="sub-text">SENSITIVE COLOR V4</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -167,7 +156,10 @@
 <div id="ui-container">
     <div class="header">
         <div class="title-group">
-            <h1>Aether VJ</h1>
+            <div class="title-row">
+                <h1>Aether VJ</h1>
+                <button class="reload-btn" onclick="reloadPage()">↻ RELOAD</button>
+            </div>
             <div class="sync-switch" id="sync-btn" onclick="toggleSync()">
                 <div class="indicator"></div>
                 <div class="switch-label">AUDIO SYNC: OFF</div>
@@ -183,57 +175,60 @@
             <div class="label-row"><label>Flow (Speed)</label> <span class="value" id="val-1">0.5</span></div>
             <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
         </div>
-        
-        <div class="slider-group" id="grp-2">
+
+        <div class="slider-group" id="grp-color">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Grid (Structure)</label> <span class="value" id="val-2">0.3</span></div>
-            <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
+            <div class="label-row"><label>Color / Mono (↔)</label> <span class="value" id="val-color">0.1</span></div>
+            <input type="range" id="colorshift" min="0" max="1" step="0.01" value="0.1">
         </div>
-        
+
         <div class="slider-group" id="grp-3">
             <div class="sync-dot"></div>
             <div class="label-row"><label>Float (Particles)</label> <span class="value" id="val-3">0.4</span></div>
             <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
         </div>
 
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 20px 0;">
-        
-        <div class="slider-group">
-            <div class="label-row"><label>Reactivity</label> <span class="value" id="val-react">1.5</span></div>
-            <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
+        <div class="slider-group" id="grp-grid-size">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Grid Size (Zoom)</label> <span class="value" id="val-grid-size">0.5</span></div>
+            <input type="range" id="gridSize" min="0" max="1" step="0.01" value="0.5">
+        </div>
+
+        <div class="slider-group" id="grp-grid-line">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Grid Line (Weight)</label> <span class="value" id="val-grid-line">0.3</span></div>
+            <input type="range" id="gridLine" min="0" max="1" step="0.01" value="0.3">
+        </div>
+
+        <div class="slider-group" id="grp-2">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Grid (Distortion)</label> <span class="value" id="val-2">0.3</span></div>
+            <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
         </div>
         
-        <div class="slider-group" id="grp-color">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Color (0=White, 1=Rainbow)</label> <span class="value" id="val-color">0.2</span></div>
-            <input type="range" id="colorshift" min="0" max="1" step="0.01" value="0.2">
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+
+        <div class="slider-group">
+            <div class="label-row"><label>Reactivity (↕)</label> <span class="value" id="val-react">1.5</span></div>
+            <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
         </div>
     </div>
 </div>
 
 <div class="bottom-bar" id="btm-bar">
-    <div class="yt-input-row">
-        <input type="text" id="yt-url" class="yt-input" placeholder="YouTube URL (ex: https://youtu.be/...)">
-        <button class="yt-load-btn" onclick="loadYoutube()">LOAD YT</button>
-    </div>
-
     <div class="file-controls">
         <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC</button>
+        <div id="file-status">MIC MODE</div>
         <label for="audio-upload" class="custom-file-btn">📂 FILE</label>
         <input type="file" id="audio-upload" accept=".mp3,audio/*" style="display:none" onchange="handleFileSelect(this)">
-        
-        <div id="file-status">MIC MODE</div>
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">❚❚</button>
     </div>
-
-    <div class="youtube-area">
-        <div id="player"></div>
-    </div>
 </div>
+<div class="key-tip">KEYBOARD: ↔ COLOR &nbsp;|&nbsp; ↕ REACTIVITY</div>
 
 <script>
     // --- Configuration ---
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB Limit
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; 
 
     // --- State Management ---
     let state = {
@@ -241,8 +236,10 @@
         syncMode: false,
         params: [0.5, 0.3, 0.4], 
         dynamicParams: [0.5, 0.3, 0.4],
-        global: { react: 1.5, paletteVal: 0.2, dynPalette: 0.2, rot: 0.0 },
-        avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0
+        global: { react: 1.5, gridSize: 0.5, lineWeight: 0.3, paletteVal: 0.1, rot: 0.0 },
+        avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
+        customTime: 0,
+        drift: 0 
     };
 
     let myShader, fft, amplitude, mic;
@@ -254,13 +251,16 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- SHADER: WHITE to RAINBOW CONTROL ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
         uniform float u_time; uniform vec2 u_res;
         uniform vec3 u_params; 
-        uniform float u_react; uniform float u_paletteVal; 
+        uniform float u_react; 
+        uniform float u_paletteVal; 
+        uniform float u_gridSize; 
+        uniform float u_lineWeight; 
+        uniform float u_drift; 
         uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
         
         #define PI 3.14159265359
@@ -286,50 +286,62 @@
             return v;
         }
 
-        // Rainbow Generator
-        vec3 getRainbow(float t) {
+        vec3 getRainbow(float t, float shift) {
             vec3 a = vec3(0.5, 0.5, 0.5);
             vec3 b = vec3(0.5, 0.5, 0.5); 
             vec3 c = vec3(1.0, 1.0, 1.0);
-            vec3 d = vec3(0.0, 0.33, 0.67) + u_time * 0.1; 
+            vec3 d = vec3(0.0, 0.33, 0.67) + shift; 
             return a + b * cos( 6.28318 * (c * t + d) );
         }
 
         float particle(vec2 uv, vec2 offset, float scale, float z_pos) {
             vec2 pos = uv - offset;
             float d = length(pos);
-            float size_scale = 1.0 / (1.0 + abs(z_pos * 0.8));
+            float dynamicSize = 1.0 + u_bass * u_react * 0.5;
+            float size_scale = 1.0 / (1.0 + abs(z_pos * 0.8 / dynamicSize));
             return 0.06 / (d + 0.005) * smoothstep(scale * size_scale, 0.0, d);
         }
 
         void main() {
             vec2 uv = vTexCoord;
             uv.x *= u_res.x / u_res.y;
-            
             vec2 centered = uv - 0.5;
-            centered *= rot2d(u_rot * 0.05); 
+            centered *= rot2d(u_rot * 0.05 + u_drift * 0.1); 
             uv = centered + 0.5;
 
             // Fluid
-            float speed = u_params.x * 0.2; 
             float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
-            
-            vec2 q = vec2(fbm(uv + u_time * speed, 2), fbm(uv + vec2(5.2, 1.3) + u_time * speed, 2));
-            vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.2, 2), 
-                          fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.2, 2));         
+            vec2 q = vec2(fbm(uv + u_time * 0.5 + u_drift, 2), fbm(uv + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
+            vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
+                          fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));          
             float liquid = fbm(uv + r * warpStrength, 3);
 
-            // Grid
-            float gridScale = 4.0 + u_params.y * 30.0; 
-            vec2 gridUV = (uv + r * 0.05) * gridScale;
-            float gridLine = smoothstep(0.48, 0.5, abs(fract(gridUV.x + u_time*0.02) - 0.5));
-            gridLine += smoothstep(0.48, 0.5, abs(fract(gridUV.y - u_time*0.01) - 0.5));
-            float structure = gridLine * min(u_params.y, 0.8) * (1.0 + u_bass * 0.3); 
+            // Water Grid
+            float ripple = fbm(uv * 4.0 + u_time + u_drift, 2);
+            vec2 organicShift = vec2(ripple, ripple) * u_bass * u_react * 0.8; 
+            float userGridScale = 2.0 + u_gridSize * 48.0; 
+            vec2 gridUV = (uv + r * 0.05 + organicShift) * userGridScale;
+            gridUV.x += sin(gridUV.y * 0.5 + u_time * 2.0) * u_vol * u_react * 0.8; 
+            
+            float lineNoise = fbm(gridUV * 0.1 + u_time * 0.2, 2);
+            float thickness = (0.01 + lineNoise * 0.1) * u_lineWeight + (u_bass * u_react * 0.04 * u_lineWeight); 
+            
+            float distToLineX = abs(fract(gridUV.x + u_time*0.5) - 0.5);
+            float distToLineY = abs(fract(gridUV.y - u_time*0.5) - 0.5);
+            float gridX = smoothstep(thickness, thickness - 0.01, distToLineX);
+            float gridY = smoothstep(thickness, thickness - 0.01, distToLineY);
+            
+            float alphaNoise = fbm(gridUV * 0.3 - u_time * 0.1 + u_drift, 2);
+            float gridAlpha = smoothstep(0.3 - (u_vol*0.3), 0.7, alphaNoise); 
+            float weightFade = smoothstep(0.0, 0.05, u_lineWeight);
+
+            float rawGrid = max(gridX, gridY);
+            float structure = rawGrid * gridAlpha * weightFade * min(u_params.y, 1.5) * (1.0 + u_bass * 0.8);
+            structure += structure * lineNoise * 0.5; 
 
             // Particles
             float particles = 0.0;
             vec3 particleColorAccum = vec3(0.0);
-            
             float particleGridScale = 6.0 + u_params.z * 10.0;
             vec2 pUV = uv * particleGridScale;
             vec2 id = floor(pUV);
@@ -340,99 +352,79 @@
                     vec2 neighbor = vec2(float(x), float(y));
                     vec2 neighborID = id + neighbor;
                     float n = hash(neighborID); 
-                    
-                    float t = u_time * (0.2 + n * 0.2); 
+                    float t = u_time * (0.8 + n * 0.5) + u_drift * n;
                     float x_freq = 2.0 + n * 3.0;
                     float y_freq = 2.0 + fract(n * 10.0) * 3.0;
-                    
-                    float posX = sin(t * x_freq + n * 10.0) * (0.6 + u_treble * u_react * 0.5);
-                    float posY = cos(t * y_freq + n * 20.0) * (0.6 + u_treble * u_react * 0.5);
+                    float shake = u_treble * u_react * 1.0;
+                    float posX = sin(t * x_freq + n * 10.0) * (0.6 + shake);
+                    float posY = cos(t * y_freq + n * 20.0) * (0.6 + shake);
                     float z_pos = sin(t * 1.5 + n * 5.0) * 1.5; 
-                    
                     vec2 pOffset = neighbor + vec2(posX, posY);
-                    float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * (1.0 + u_treble * u_react);
+                    float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * (1.0 + shake);
                     float fade = smoothstep(2.0, -1.0, abs(z_pos));
-                    
                     float pIntensity = particle(pUV, pOffset, pSize, z_pos) * fade;
-                    
-                    // --- COLOR LOGIC: WHITE <-> RAINBOW MIX ---
-                    // Generate rainbow color for this particle
-                    vec3 rainbowCol = getRainbow(n + u_time * 0.2 + u_bass * 0.1); 
-                    
-                    // Pure White color
-                    vec3 whiteCol = vec3(0.9, 0.95, 1.0);
-                    
-                    // Mix based on u_paletteVal (Slider)
-                    // 0.0 = White, 1.0 = Rainbow
-                    vec3 pCol = mix(whiteCol, rainbowCol, u_paletteVal);
-                    
-                    particleColorAccum += pIntensity * pCol; 
+                    vec3 rainbowCol = getRainbow(n + u_time * 0.2 + u_bass * 0.1, u_drift * 0.2); 
+                    particleColorAccum += pIntensity * rainbowCol; 
                     particles += pIntensity;
                 }
             }
             particles *= min(u_params.z * 2.0, 1.2); 
 
-            // Mix Final Color
-            // Background is subtle rainbow or white
-            vec3 bgRainbow = getRainbow(liquid * 0.5 + u_time * 0.05);
-            vec3 bgWhite = vec3(0.1);
-            vec3 bgCol = mix(bgWhite, bgRainbow, u_paletteVal) * (0.2 + liquid * 0.3);
-            
-            // Grid Color
-            vec3 gridCol = mix(vec3(0.3), vec3(0.0, 1.0, 1.0), u_paletteVal) * structure;
+            // Color
+            vec3 bgRainbow = getRainbow(liquid * 0.5 + u_time * 0.05, u_drift * 0.1);
+            vec3 fullColor = (bgRainbow * (0.2 + liquid * 0.3)) + (vec3(0.2, 0.9, 1.0) * structure) + particleColorAccum;
+            float luminance = dot(fullColor, vec3(0.299, 0.587, 0.114));
+            vec3 monoColor = vec3(luminance) * 1.2; 
+            monoColor = pow(monoColor, vec3(1.4));
 
-            vec3 finalColor = bgCol + gridCol + particleColorAccum;
-            
-            // Boost brightness on volume
-            finalColor += vec3(u_vol * u_react * 0.3); 
+            float volCurve = pow(u_vol * u_react, 1.5) * 3.0; 
+            float dynamicSat = u_paletteVal + (u_paletteVal * volCurve);
+            dynamicSat = clamp(dynamicSat, 0.0, 1.0);
 
-            // Tone Mapping
+            vec3 finalColor = mix(monoColor, fullColor, dynamicSat);
+            finalColor += vec3(pow(u_bass * u_react, 2.0) * 0.2 * dynamicSat); 
+
             finalColor = finalColor / (finalColor + vec3(1.0)); 
             finalColor = pow(finalColor, vec3(0.8)); 
-
             gl_FragColor = vec4(finalColor, 1.0);
         }
     `;
 
-    // --- YouTube API ---
-    let player;
-    function onYouTubeIframeAPIReady() {
-        player = new YT.Player('player', {
-            height: '100%', width: '100%', videoId: '', 
-            playerVars: { 'playsinline': 1, 'controls': 1, 'autoplay': 1 }, 
-            events: { 'onError': onPlayerError }
-        });
-    }
+    function reloadPage() { location.reload(); }
 
-    function onPlayerError(event) {
-        console.error("YT Error:", event.data);
-        alert("YouTube再生エラー: 動画が再生できません。制限付き動画か、IDが間違っている可能性があります。");
-    }
-
-    function loadYoutube() {
-        let input = document.getElementById('yt-url').value;
-        const status = document.getElementById('file-status');
-        
-        let videoId = "";
-        const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-        const match = input.match(regExp);
-        
-        if (match && match[7].length == 11) {
-            videoId = match[7];
-        } else if (input.length === 11) {
-            videoId = input;
+    // --- KEYBOARD CONTROLS ---
+    function keyPressed() {
+        let changed = false;
+        // Arrow Left/Right: Color/Mono
+        if (keyCode === RIGHT_ARROW) {
+            state.global.paletteVal = constrain(state.global.paletteVal + 0.05, 0, 1);
+            changed = true;
+        } else if (keyCode === LEFT_ARROW) {
+            state.global.paletteVal = constrain(state.global.paletteVal - 0.05, 0, 1);
+            changed = true;
+        } 
+        // Arrow Up/Down: Reactivity
+        else if (keyCode === UP_ARROW) {
+            state.global.react = constrain(state.global.react + 0.1, 0, 3);
+            changed = true;
+        } else if (keyCode === DOWN_ARROW) {
+            state.global.react = constrain(state.global.react - 0.1, 0, 3);
+            changed = true;
         }
 
-        if (videoId) {
-            if (soundFile && soundFile.isPlaying()) soundFile.stop();
-            mic.stop();
-            status.innerText = "YT: " + videoId;
-            player.loadVideoById(videoId);
-            player.playVideo(); 
-            alert("YouTubeをロードしました。\n【重要】\n1. マイクを許可してください（URLバーの鍵アイコン等から）。\n2. 端末のスピーカーから音を出してください。");
-            switchToMic(); 
-        } else {
-            alert("URLが無効です。");
+        if (changed) {
+            // Update UI elements if they exist
+            updateSliderUI('colorshift', state.global.paletteVal);
+            updateSliderUI('reactivity', state.global.react);
+            return false; // Prevent default browser scrolling
+        }
+    }
+
+    function updateSliderUI(id, val) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = val;
+            el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
         }
     }
 
@@ -455,15 +447,21 @@
         const vC = document.getElementById('viz-canvas');
         vizCtx = vC.getContext('2d');
 
-        ['param1', 'param2', 'param3', 'reactivity', 'colorshift'].forEach((id, i) => {
+        ['param1', 'colorshift', 'param3', 'gridSize', 'gridLine', 'param2', 'reactivity'].forEach((id) => {
             const el = document.getElementById(id);
-            el.addEventListener('input', (e) => {
-                let val = parseFloat(e.target.value);
-                if (i < 3) state.params[i] = val;
-                else if (i === 3) state.global.react = val;
-                else state.global.paletteVal = val; 
-                e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
-            });
+            if(el) {
+                el.addEventListener('input', (e) => {
+                    let val = parseFloat(e.target.value);
+                    if(id === 'param1') state.params[0] = val; 
+                    else if(id === 'colorshift') state.global.paletteVal = val; 
+                    else if(id === 'param3') state.params[2] = val; 
+                    else if(id === 'gridSize') state.global.gridSize = val; 
+                    else if(id === 'gridLine') state.global.lineWeight = val; 
+                    else if(id === 'param2') state.params[1] = val; 
+                    else if(id === 'reactivity') state.global.react = val; 
+                    e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
+                });
+            }
         });
     }
 
@@ -484,7 +482,7 @@
         mic.start();
         fft.setInput(mic);
         amplitude.setInput(mic);
-        document.getElementById('file-status').innerText = "MIC / YT MODE";
+        document.getElementById('file-status').innerText = "MIC MODE";
         if(!state.syncMode) toggleSync();
     }
     
@@ -498,12 +496,11 @@
             return;
         }
 
-        if(player && player.stopVideo) player.stopVideo();
         statusEl.innerText = "LOADING...";
         
         const blobUrl = URL.createObjectURL(file);
         soundFile = loadSound(blobUrl, () => {
-            statusEl.innerText = file.name.toUpperCase();
+            statusEl.innerText = "FILE PLAYING";
             document.getElementById('play-btn').style.display = "flex";
             mic.stop();
             soundFile.play();
@@ -557,12 +554,17 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
+        let baseSpeed = state.params[0] * 0.02; 
+        let audioSpeedBoost = state.avgVol * 0.2 * state.global.react; 
+        state.customTime += baseSpeed + audioSpeedBoost;
+        state.drift += 0.002; 
+
         let targetP = [0, 0, 0];
         
         if (state.syncMode) {
-            targetP[0] = state.params[0] + (state.avgVol * 2.0); 
+            targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
             targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
-            targetP[2] = state.params[2] + (state.avgTreble * 2.0 * state.global.react);
+            targetP[2] = state.params[2] + (state.avgTreble * 2.0 * state.global.react); 
             rotAccumulator += (0.0005 + state.avgVol * 0.05); 
         } else {
             targetP = [...state.params];
@@ -576,10 +578,13 @@
         
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
-        myShader.setUniform('u_time', millis() / 1000.0);
+        myShader.setUniform('u_time', state.customTime);
+        myShader.setUniform('u_drift', state.drift); 
         myShader.setUniform('u_params', state.dynamicParams);
         myShader.setUniform('u_react', state.global.react); 
-        myShader.setUniform('u_paletteVal', state.global.paletteVal);
+        myShader.setUniform('u_paletteVal', state.global.paletteVal); 
+        myShader.setUniform('u_gridSize', state.global.gridSize); 
+        myShader.setUniform('u_lineWeight', state.global.lineWeight); 
         myShader.setUniform('u_rot', rotAccumulator);
         myShader.setUniform('u_bass', state.avgBass); 
         myShader.setUniform('u_mid', state.avgMid);
