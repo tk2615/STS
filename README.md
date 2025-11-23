@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v10.2 Clean Layout</title>
+    <title>Aether VJ v10.3 Total Immersion</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -35,8 +35,12 @@
             position: absolute; top: 20px; left: 20px; pointer-events: auto;
             display: inline-flex; align-items: center; gap: 8px; width: fit-content;
             background: rgba(10,10,10,0.6); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
+            cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px);
+            opacity: 1; transform: translateY(0);
         }
+        /* Hidden state for Sync Switch */
+        .sync-switch.hidden { opacity: 0; pointer-events: none; transform: translateY(-20px); }
+        
         .sync-switch:hover { background: rgba(255,255,255,0.1); }
         .sync-switch.active { background: rgba(0, 255, 255, 0.15); border-color: rgba(0, 255, 255, 0.5); box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
         .indicator { width: 8px; height: 8px; border-radius: 50%; background: #444; transition: all 0.3s; }
@@ -44,6 +48,18 @@
         .switch-label { font-size: 10px; letter-spacing: 1px; color: #777; font-weight: 700; }
         .sync-switch.active .switch-label { color: #fff; }
         @keyframes pulse-beat { 0% { opacity: 0.5; transform: scale(1.0); } 100% { opacity: 1.0; transform: scale(1.2); } }
+
+        /* Mini Switch */
+        .mini-switch {
+            width: 30px; height: 16px; background: #333; border-radius: 10px; position: relative; cursor: pointer; transition: background 0.2s;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .mini-switch.active { background: rgba(0, 255, 255, 0.3); border-color: #0ff; }
+        .mini-indicator {
+            width: 12px; height: 12px; background: #888; border-radius: 50%; 
+            position: absolute; top: 1px; left: 1px; transition: transform 0.2s, background 0.2s;
+        }
+        .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
 
         /* --- CONTROLS PANEL (GLASS) --- */
         .controls-panel {
@@ -57,7 +73,7 @@
             background: rgba(10, 10, 10, 0.6); 
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-            padding: 0; /* Padding handled inside for scrollbar aesthetics */
+            padding: 0;
             
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
@@ -68,7 +84,6 @@
         }
         .controls-panel.hidden { transform: translateX(120%); opacity: 0; pointer-events: none; }
 
-        /* Panel Header with Close Button */
         .panel-header {
             display: flex; justify-content: space-between; align-items: center;
             padding: 15px 20px;
@@ -83,7 +98,6 @@
         }
         .panel-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 
-        /* Panel Content Scrollable Area */
         .panel-content {
             padding: 20px;
             overflow-y: auto;
@@ -93,7 +107,6 @@
         .panel-content::-webkit-scrollbar { width: 4px; }
         .panel-content::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
 
-        /* Floating Open Button (Visible when panel is hidden) */
         .open-btn-fixed {
             position: fixed; top: 20px; right: 20px; z-index: 100; pointer-events: auto;
             width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -103,18 +116,6 @@
         }
         .controls-panel.hidden ~ .open-btn-fixed { opacity: 1; pointer-events: auto; transform: scale(1.0); }
         .open-btn-fixed:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
-
-        /* Mini Switch */
-        .mini-switch {
-            width: 30px; height: 16px; background: #333; border-radius: 10px; position: relative; cursor: pointer; transition: background 0.2s;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        .mini-switch.active { background: rgba(0, 255, 255, 0.3); border-color: #0ff; }
-        .mini-indicator {
-            width: 12px; height: 12px; background: #888; border-radius: 50%; 
-            position: absolute; top: 1px; left: 1px; transition: transform 0.2s, background 0.2s;
-        }
-        .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
 
         .panel-grid {
             display: grid;
@@ -237,7 +238,6 @@
             .controls-panel { width: 100%; top:auto; right:0; left:0; bottom: 120px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1); height: 60vh; background: rgba(10,10,10,0.8); }
             .panel-grid { grid-template-columns: 1fr; gap: 0; }
             .section-spacer { margin-top: 20px; }
-            .header { position: relative; top: 0; left: 0; margin-bottom: 10px; }
         }
     </style>
 </head>
@@ -822,6 +822,7 @@
         };
 
         const onPlayerReady = (event) => {
+            // 2-step force play
             event.target.mute();
             event.target.playVideo();
             setTimeout(() => {
@@ -843,7 +844,7 @@
                 height: '100%', width: '100%',
                 videoId: vidId,
                 playerVars: { 
-                    'autoplay': 1, 'controls': 0, 'mute': 1, 
+                    'autoplay': 1, 'controls': 0, 'mute': 1, // Init mute for autoplay
                     'loop': 1, 'playlist': vidId,
                     'origin': window.location.origin
                 },
@@ -1279,8 +1280,11 @@
         state.uiHidden = !state.uiHidden;
         document.getElementById('ctrl-panel').classList.toggle('hidden', state.uiHidden);
         document.getElementById('btm-bar').classList.toggle('hidden', state.uiHidden);
-        document.querySelector('.header').style.opacity = state.uiHidden ? '0' : '1';
-        document.querySelector('.toggle-btn-fixed').innerText = state.uiHidden ? '☰' : '✕';
+        // Toggle Sync button too
+        document.getElementById('sync-btn').classList.toggle('hidden', state.uiHidden);
+        
+        // Also toggle open button
+        // No, open button is handled by CSS selector .hidden ~ .open-btn-fixed
     };
     
     window.toggleSync = () => {
