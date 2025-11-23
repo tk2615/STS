@@ -1,539 +1,600 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>STRANGER SOURCE: REALTIME</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Benguiat+ITC&family=Roboto+Slab:wght@900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aether VJ: Free Flow Particles</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        body { 
-            margin: 0; overflow: hidden; color: #ff1100; 
-            font-family: 'Roboto Slab', serif;
-            background: #000;
-            touch-action: manipulation;
+        /* --- Base Styling --- */
+        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: 'Helvetica Neue', sans-serif; color: #ccc; }
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        canvas { display: block; position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
+
+        /* --- UI Layer (z-index 100+) --- */
+        #ui-container {
+            position: fixed; inset: 0; pointer-events: none; z-index: 100;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 25px;
         }
 
-        #canvas-container { width: 100vw; height: 100vh; position: fixed; top: 0; left: 0; z-index: 1; }
+        /* Header */
+        .header { display: flex; align-items: flex-start; justify-content: space-between; pointer-events: auto; }
+        .title-group { display: flex; flex-direction: column; gap: 8px; }
+        h1 { margin: 0; font-size: 11px; letter-spacing: 5px; opacity: 0.6; text-transform: uppercase; color: #fff; }
         
-        /* --- UI DESIGN --- */
-        #overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 100; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; transition: opacity 1s ease;
+        /* Sync Switch */
+        .sync-switch {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
         }
-        
-        /* STRANGER THINGS LOGO STYLE */
-        .title { 
-            font-family: 'Roboto Slab', serif; font-weight: 900; font-size: 7vw; 
-            letter-spacing: -0.03em; color: transparent; 
-            -webkit-text-stroke: 2px #ff1100;
-            text-shadow: 0 0 20px rgba(255, 17, 0, 0.6); 
-            margin-bottom: 20px; text-align: center; 
-            transform: scaleY(1.1);
-        }
-        .title span { display: block; font-size: 0.4em; letter-spacing: 0.2em; -webkit-text-stroke: 1px #ff1100; margin-top: -10px;}
+        .sync-switch:hover { background: rgba(255,255,255,0.1); }
+        .sync-switch.active { background: rgba(0, 255, 255, 0.15); border-color: rgba(0, 255, 255, 0.5); box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
+        .indicator { width: 8px; height: 8px; border-radius: 50%; background: #444; transition: all 0.3s; }
+        .sync-switch.active .indicator { background: #0ff; box-shadow: 0 0 8px #0ff; animation: pulse-beat 0.5s infinite alternate; }
+        .switch-label { font-size: 10px; letter-spacing: 1px; color: #777; font-weight: 700; }
+        .sync-switch.active .switch-label { color: #fff; }
+        @keyframes pulse-beat { 0% { opacity: 0.5; transform: scale(1.0); } 100% { opacity: 1.0; transform: scale(1.2); } }
 
-        #hud, #legend, #source-list {
-            position: absolute; z-index: 20; pointer-events: none;
-            font-family: 'Share Tech Mono', monospace; text-shadow: 0 0 5px currentColor;
-            transition: all 1s ease;
-        }
-        #hud { top: 30px; left: 30px; font-size: 12px; line-height: 1.8; }
-        #legend { top: 30px; right: 30px; font-size: 10px; text-align: right; }
-        #source-list { bottom: 30px; right: 30px; font-size: 10px; text-align: right; max-width: 60vw; opacity: 0.8; color: #8899aa; }
-        
-        .hud-val { font-weight: bold; margin-left: 10px; color: #fff; }
-        .legend-item { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-bottom: 4px;}
-        .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; box-shadow: 0 0 5px currentColor; }
-
-        #start-btn {
-            background: transparent; border: 3px solid #ff1100; color: #ff1100;
-            padding: 15px 50px; font-family: 'Roboto Slab', serif; font-weight: 900; font-size: 18px;
-            letter-spacing: 3px; cursor: pointer; transition: 0.2s; text-transform: uppercase;
-            box-shadow: 0 0 30px rgba(255, 17, 0, 0.4); text-shadow: 0 0 10px rgba(255, 17, 0, 0.8);
+        /* Controls Panel */
+        .controls-panel {
+            pointer-events: auto;
+            background: rgba(10,10,10,0.85); 
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border: 1px solid rgba(255,255,255,0.05);
             border-radius: 4px;
+            padding: 25px; width: 280px; align-self: flex-end;
+            margin-bottom: 120px;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            z-index: 101;
         }
-        #start-btn:hover { 
-            background: #ff1100; color: #000; box-shadow: 0 0 60px rgba(255, 17, 0, 1); transform: scale(1.05);
+        .controls-panel.hidden { transform: translateX(calc(100% + 50px)); opacity: 0; pointer-events: none; }
+
+        /* Visualizer Canvas */
+        #viz-canvas {
+            width: 100%; height: 40px; background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
+            border-radius: 2px; display: block;
         }
 
-        /* GLITCH EFFECT */
-        .noise-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyBAMAAADsEZWCAAAAGFBMVEUAAAA5OTkAAABERERmZmYzMzOZmZlVVVUPKLulAAAACHRSTlMvAAAAAAAACE1LMNQAAAAJcEhZcwAADsQAAA7EAZUrDhsAAABDSURBVDjLY2AYBaNg2AJGJiBpCqSsgCScgCQzkLQGkhhAtBaQxACSxkAqbSCpDCRVAEkcIImDJPKAJAmQJAGSJEAyCgD1zxO130O5GgAAAABJRU5ErkJggg==');
-            opacity: 0.08; pointer-events: none; z-index: 10;
+        /* Sliders */
+        .slider-group { margin-bottom: 22px; position: relative; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 2px; font-weight: 500; }
+        .value { font-size: 9px; font-family: 'Courier New', monospace; color: #bbb; }
+        
+        .sync-dot {
+            position: absolute; right: -8px; top: 2px; width: 4px; height: 4px; background: #0ff; border-radius: 50%;
+            opacity: 0; transition: opacity 0.3s; box-shadow: 0 0 8px #0ff;
+        }
+        .sync-active .sync-dot { opacity: 1.0; }
+
+        input[type=range] { 
+            width: 100%; -webkit-appearance: none; background: transparent; height: 20px; 
+            cursor: pointer; margin: 0; touch-action: none; position: relative; z-index: 200; 
+        }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.15); border-radius: 2px;}
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
+            background: #111; margin-top: -6px; box-shadow: 0 0 0 1px rgba(255,255,255,0.5); transition: transform 0.1s; 
+        }
+        input[type=range]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.2); }
+
+        /* Toggle Button */
+        .toggle-btn-fixed {
+            position: fixed; top: 25px; right: 25px; z-index: 200; pointer-events: auto;
+            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.1); color: #888;
+            backdrop-filter: blur(10px); transition: all 0.3s; font-size: 14px; background: rgba(255,255,255,0.02);
+        }
+        .toggle-btn-fixed:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.3); }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(5,5,5,0.95); border-top: 1px solid rgba(255,255,255,0.05);
+            z-index: 101; display: flex; flex-direction: column; pointer-events: auto;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(20px);
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .bottom-bar.hidden { transform: translateY(120%); }
+
+        /* File Controls */
+        .file-controls {
+            padding: 15px 25px; display: flex; align-items: center; gap: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .custom-file-btn {
+            background: #222; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+            padding: 10px 20px; border-radius: 20px; font-size: 11px; letter-spacing: 1px;
+            cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .custom-file-btn:active { transform: scale(0.95); background: #fff; color: #000; }
+        #file-status { font-size: 10px; color: #888; font-family: 'Courier New', monospace; flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        .play-pause-btn {
+            width: 35px; height: 35px; border-radius: 50%; background: #0ff; border: none;
+            color: #000; display: flex; align-items: center; justify-content: center; cursor: pointer;
+            display: none; font-weight: bold;
+        }
+        .mic-mode-btn {
+            background: #005500;
+            border-color: #00ff00;
+            color: #00ff00;
+        }
+        .mic-mode-btn:active {
+            background: #00ff00;
+            color: #000;
         }
 
-        @media (max-width: 768px) {
-            .title { font-size: 13vw; -webkit-text-stroke: 1px #ff1100; }
-            #hud { font-size: 10px; top: 20px; left: 20px; }
-            #legend { font-size: 9px; top: 20px; right: 20px; }
-            #source-list { font-size: 8px; bottom: 20px; right: 20px; }
+
+        /* YouTube Area */
+        .youtube-area {
+            display: flex; align-items: center; padding: 10px 25px; gap: 15px; height: 50px;
+            opacity: 0.6; transition: opacity 0.3s;
+        }
+        .youtube-area:hover { opacity: 1.0; }
+
+        /* Overlay */
+        #overlay {
+            position: fixed; inset: 0; background: #000; z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            cursor: pointer; color: #fff; transition: opacity 0.5s ease-out;
+            pointer-events: auto;
+        }
+        #overlay:active { background: #111; }
+        .start-text { font-size: 14px; letter-spacing: 8px; font-weight: 300; margin-bottom: 20px; opacity: 0.9; text-align: center; pointer-events: none; }
+        .sub-text { font-size: 10px; color: #0ff; letter-spacing: 2px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(0,255,255,0.3); pointer-events: none; }
+
+        @media (max-width: 600px) {
+            .controls-panel { width: 100%; margin-bottom: 140px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
+            .file-controls { padding: 12px 15px; }
+            .youtube-area { display: none; } 
         }
     </style>
 </head>
 <body>
 
-    <div class="noise-overlay" id="noise"></div>
+<div id="overlay" onclick="initApp()">
+    <div class="start-text">TAP TO START</div>
+    <div class="sub-text">VISUALIZER CORE</div>
+</div>
 
-    <div id="overlay">
-        <div class="title">STRANGER<br><span>SOURCE</span></div>
-        <button id="start-btn">CONNECT</button>
+<div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
+
+<div id="ui-container">
+    <div class="header">
+        <div class="title-group">
+            <h1>Aether VJ</h1>
+            <div class="sync-switch" id="sync-btn" onclick="toggleSync()">
+                <div class="indicator"></div>
+                <div class="switch-label">AUDIO SYNC: OFF</div>
+            </div>
+        </div>
     </div>
 
-    <div id="hud">
-        <div>DIMENSION <span id="mode-display" class="hud-val">INITIALIZING</span></div>
-        <div>TIME <span id="clock-display" class="hud-val">--:--</span></div>
-        <div>LOC <span id="loc-display" class="hud-val">Scanning...</span></div>
-        <div>SIGNAL <span id="status-display" class="hud-val">Offline</span></div>
-    </div>
+    <div class="controls-panel" id="ctrl-panel">
+        <canvas id="viz-canvas" width="230" height="40"></canvas>
 
-    <div id="legend">
-        <div class="legend-item">HAWKINS <span class="dot" id="dot-local"></span></div>
-        <div class="legend-item">NETFLIX <span class="dot" id="dot-media"></span></div>
-        <div class="legend-item">CAST <span class="dot" id="dot-cast"></span></div>
-        <div class="legend-item">LAB <span class="dot" id="dot-lab"></span></div>
-        <div class="legend-item">UPSIDE DOWN <span class="dot" id="dot-upside"></span></div>
-    </div>
-
-    <div id="source-list">System Standby...</div>
-    <div id="canvas-container"></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/simplex-noise/2.4.0/simplex-noise.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-
-    <script>
-        // --- CONFIGURATION ---
-        const isMobile = window.innerWidth < 768;
-        const CONFIG = {
-            spawnRate: 180,      
-            wordLife: 60000,     
-            baseSize: isMobile ? 45 : 65,
-            connectDist: isMobile ? 450 : 600,   
-            particleCount: isMobile ? 800 : 2500, 
-            fogDensity: 0.0004
-        };
-
-        // --- ROBUST DATA ACQUISITION ---
-        // Google News RSS via Proxy (High Volume, Reliable)
-        const NEWS_FEEDS = [
-            "https://news.google.com/rss/search?q=Stranger+Things+Netflix&hl=en-US&gl=US&ceid=US:en",
-            "https://news.google.com/rss/search?q=Millie+Bobby+Brown&hl=en-US&gl=US&ceid=US:en",
-            "https://news.google.com/rss/search?q=Duffer+Brothers&hl=en-US&gl=US&ceid=US:en",
-            "https://news.google.com/rss/search?q=Stranger+Things+Season+5&hl=en-US&gl=US&ceid=US:en"
-        ];
+        <div class="slider-group" id="grp-1">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Fluidity (Speed)</label> <span class="value" id="val-1">0.5</span></div>
+            <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
+        </div>
         
-        // Fallback Proxy
-        const CORS_PROXY = "https://api.allorigins.win/get?url=";
-
-        // Internal Data (Fail-safe)
-        const LORE_TERMS = [
-            "ELEVEN", "VECNA", "DEMOGORGON", "MIND FLAYER", "HAWKINS", "UPSIDE DOWN", "NETFLIX",
-            "HOPPER", "JOYCE", "WILL", "MIKE", "DUSTIN", "LUCAS", "MAX", "EDDIE", "STEVE", "NANCY", "ROBIN",
-            "001", "011", "008", "THE GATE", "RUSSIAN", "HELLFIRE", "D&D", "WAFFLES", "RUN", "FRIENDS",
-            "CODE RED", "STARCOURT", "MALL", "LABORATORY", "MKULTRA", "ENERGY", "LIGHTS", "CHRISTMAS"
-        ];
-
-        // Color Classification
-        const TYPE_LOCAL = 0; // Yellow
-        const TYPE_MEDIA = 1; // Pink
-        const TYPE_CAST = 2;  // Cyan
-        const TYPE_LAB = 3;   // Green
-        const TYPE_UPSIDE = 4; // Red
-
-        // Palettes
-        const PALETTES = {
-            day: { // 1980s Surface
-                bg: ['#2a1035', '#401020', '#101030', '#200510'],
-                fog: 0x2a1035,
-                isUpsideDown: false,
-                textCols: {
-                    [TYPE_LOCAL]: "#ffcc00", [TYPE_MEDIA]: "#ff0066", [TYPE_CAST]: "#00ffff",
-                    [TYPE_LAB]: "#ccff00", [TYPE_UPSIDE]:"#ff3300"
-                }
-            },
-            night: { // Upside Down
-                bg: ['#050a15', '#000000', '#0a0505', '#101520'],
-                fog: 0x020205,
-                isUpsideDown: true,
-                textCols: {
-                    [TYPE_LOCAL]: "#556677", [TYPE_MEDIA]: "#aa0000", [TYPE_CAST]: "#660000",
-                    [TYPE_LAB]: "#223344", [TYPE_UPSIDE]:"#ff0000"
-                }
-            }
-        };
-
-        let wordBuffer = [];
-        let appState = { mode: 'day', targetFogCol: new THREE.Color(0x000000), currentBgCols: [], targetPalette: null };
-        let isAudioReady = false;
-
-        // --- AUDIO SYSTEM ---
-        const Audio = {
-            synth: null, pad: null, bass: null, clock: null, reverb: null, delay: null, dist: null,
-            async init() {
-                await Tone.start();
-                Tone.Transport.bpm.value = 84;
-                this.reverb = new Tone.Reverb({decay: 8, wet: 0.5}).toDestination();
-                await this.reverb.generate();
-                this.delay = new Tone.PingPongDelay("8n.", 0.4).connect(this.reverb);
-                this.dist = new Tone.Distortion(0.4).connect(this.delay);
-
-                this.synth = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: "sawtooth" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 1 }
-                }).connect(this.delay);
-                this.synth.volume.value = -12;
-
-                this.pad = new Tone.PolySynth(Tone.Synth, {
-                    oscillator: { type: "fatsooth", spread: 20 }, envelope: { attack: 1, decay: 3, sustain: 0.8, release: 3 }
-                }).connect(this.reverb);
-                this.pad.volume.value = -20;
-
-                this.bass = new Tone.MonoSynth({
-                    oscillator: { type: "pulse", width: 0.2 }, filter: { type: "lowpass", frequency: 400, Q: 4 },
-                    envelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.5 }
-                }).connect(this.reverb);
-                this.bass.volume.value = -12;
-
-                this.clock = new Tone.MembraneSynth().toDestination();
-                this.clock.volume.value = -15;
-
-                this.startLoops();
-                isAudioReady = true;
-                Tone.Transport.start();
-            },
-            startLoops() {
-                const ARPEGGIO = ["C2", "E2", "G2", "B2", "C3", "E3", "G3", "B3"];
-                let idx = 0;
-                Tone.Transport.scheduleRepeat((time) => {
-                    if (appState.mode === 'day') {
-                        this.synth.triggerAttackRelease(ARPEGGIO[idx % 8], "16n", time);
-                    } else {
-                        if (Math.random() > 0.6) this.synth.triggerAttackRelease(ARPEGGIO[Math.floor(Math.random()*4)], "8n", time);
-                        if (idx % 4 === 0) this.clock.triggerAttackRelease("C1", "32n", time);
-                    }
-                    if (idx % 4 === 0) this.bass.triggerAttackRelease(appState.mode === 'day' ? "C2" : "C1", "8n", time);
-                    idx++;
-                }, "8n");
-                Tone.Transport.scheduleRepeat((time) => {
-                    this.pad.triggerAttackRelease(appState.mode === 'day' ? ["C3","E3","G3"] : ["C2","Eb2","G2"], "4m", time);
-                }, "4m");
-            },
-            setMode(mode) {
-                if(!isAudioReady) return;
-                if(mode === 'day') {
-                    this.synth.disconnect(this.dist); this.synth.connect(this.delay);
-                } else {
-                    this.synth.disconnect(this.delay); this.synth.connect(this.dist);
-                }
-            },
-            triggerEvent() {
-                // Just a visual trigger hook
-            }
-        };
-
-        // --- DATA FETCHING ---
-        async function fetchFeeds() {
-            document.getElementById('status-display').innerText = "Intercepting Signals...";
-            
-            // 1. Load internal lore first (Instant Data)
-            LORE_TERMS.sort(()=>0.5-Math.random()).slice(0, 10).forEach(w => addWord(w, "ARCHIVE", Math.random()>0.7));
-
-            // 2. Fetch Real Data via AllOrigins (Raw XML Parsing)
-            let hitCount = 0;
-            const parser = new DOMParser();
-
-            const fetchPromises = NEWS_FEEDS.map(url => 
-                fetch(CORS_PROXY + encodeURIComponent(url))
-                .then(r => r.json())
-                .then(data => {
-                    if (data && data.contents) {
-                        const xmlDoc = parser.parseFromString(data.contents, "text/xml");
-                        const items = xmlDoc.querySelectorAll("item > title");
-                        items.forEach(item => {
-                            const title = item.textContent;
-                            processTitle(title, "G-NEWS");
-                            hitCount++;
-                        });
-                    }
-                })
-                .catch(e => console.log("Signal Lost", e))
-            );
-
-            await Promise.all(fetchPromises);
-            
-            document.getElementById('status-display').innerText = `Signal Locked: ${hitCount} Entities`;
-            document.getElementById('source-list').innerHTML = "CONNECTED TO:<br>GOOGLE NEWS RELAY<br>HAWKINS LAB ARCHIVE";
-        }
-
-        function processTitle(title, source) {
-            // Remove source name often found in Google News like " - Variety"
-            const clean = title.split(" - ")[0]; 
-            const words = clean.split(/\s+/);
-            
-            words.forEach(w => {
-                const c = w.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
-                // Filter boring words
-                if (c.length > 3 && !["WHAT","WHEN","THIS","THAT","WITH","FROM"].includes(c)) {
-                    addWord(c, source, false);
-                }
-            });
-        }
-
-        function addWord(text, source, isPriority) {
-            let type = TYPE_LOCAL;
-            const t = text.toUpperCase();
-            
-            // Classification
-            if (t.includes("NETFLIX") || t.includes("SEASON")) type = TYPE_MEDIA;
-            else if (t.includes("MILLIE") || t.includes("FINN") || t.includes("DUFFER")) type = TYPE_CAST;
-            else if (t.includes("LAB") || t.includes("SCIENCE") || t.includes("GATE")) type = TYPE_LAB;
-            else if (t.includes("VECNA") || t.includes("DEMOGORGON") || t.includes("UPSIDE")) type = TYPE_UPSIDE;
-
-            wordBuffer.push({ text: text, type: type, source: source, isPriority: isPriority });
-        }
-
-        // Always keep buffer full with Lore if needed
-        setInterval(() => {
-            if (wordBuffer.length < 20) {
-                const lore = LORE_TERMS[Math.floor(Math.random() * LORE_TERMS.length)];
-                addWord(lore, "SYSTEM_REBOOT", false);
-            }
-        }, 1000);
-
-        setInterval(fetchFeeds, 30000);
-
-        // --- VISUALS ---
-        function setInitialCurrentBgCols(mode) {
-            appState.currentBgCols = PALETTES[mode].bg.map(hex => new THREE.Color(hex));
-        }
-        function setTargetPalette(mode) {
-            appState.targetPalette = PALETTES[mode].bg.map(hex => new THREE.Color(hex));
-            appState.targetFogCol.setHex(PALETTES[mode].fog);
-        }
-        function updateHUDColors(mode) {
-            const p = PALETTES[mode];
-            const isUpside = p.isUpsideDown;
-            const uiColor = isUpside ? '#aa0000' : '#00ffcc';
-            
-            document.body.style.color = isUpside ? '#ff0000' : '#ffffff';
-            document.getElementById('mode-display').innerText = isUpside ? "THE UPSIDE DOWN" : "1983 / SURFACE";
-            document.getElementById('mode-display').style.color = isUpside ? 'red' : '#ffcc00';
-            document.getElementById('noise').style.opacity = isUpside ? 0.15 : 0.05;
-
-            const c = p.textCols;
-            document.getElementById('dot-local').style.backgroundColor = c[TYPE_LOCAL];
-            document.getElementById('dot-media').style.backgroundColor = c[TYPE_MEDIA];
-            document.getElementById('dot-cast').style.backgroundColor = c[TYPE_CAST];
-            document.getElementById('dot-lab').style.backgroundColor = c[TYPE_LAB];
-            document.getElementById('dot-upside').style.backgroundColor = c[TYPE_UPSIDE];
-        }
-
-        function updateTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            document.getElementById('clock-display').innerText = timeStr;
-            const h = now.getHours();
-            let newMode = (h >= 6 && h < 18) ? 'day' : 'night';
-            if(appState.mode !== newMode) {
-                appState.mode = newMode;
-                setTargetPalette(newMode);
-                updateHUDColors(newMode);
-                if(isAudioReady) Audio.setMode(newMode);
-            }
-        }
-        setInterval(updateTime, 1000);
-
-        async function fetchEnv() {
-            try {
-                const ip = await fetch('https://ipapi.co/json/').then(r=>r.json());
-                document.getElementById('loc-display').innerText = `HAWKINS LAB (RELAY: ${ip.city||'UNKNOWN'})`;
-            } catch(e){}
-        }
-
-        // THREE.js Setup
-        const scene = new THREE.Scene();
-        const fogCol = new THREE.Color(0x000000);
-        scene.fog = new THREE.FogExp2(fogCol, CONFIG.fogDensity);
-        const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 1, 4000);
-        camera.position.z = isMobile ? 800 : 600;
-        const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-        const group = new THREE.Group(); scene.add(group);
-        const wordGroup = new THREE.Group(); group.add(wordGroup);
+        <div class="slider-group" id="grp-2">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Structure (Grid)</label> <span class="value" id="val-2">0.3</span></div>
+            <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
+        </div>
         
-        // Particles
-        const pGeo = new THREE.BufferGeometry();
-        const pPos = [];
-        for(let i=0; i<CONFIG.particleCount; i++) pPos.push((Math.random()-0.5)*3000, (Math.random()-0.5)*3000, (Math.random()-0.5)*3000);
-        pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos, 3));
-        const pMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2, transparent: true, opacity: 0.4 });
-        group.add(new THREE.Points(pGeo, pMat));
+        <div class="slider-group" id="grp-3">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Texture (Particles)</label> <span class="value" id="val-3">0.4</span></div>
+            <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
+        </div>
 
-        // Lines
-        const MAX_LINES = 1000;
-        const lineGeo = new THREE.BufferGeometry();
-        const linePos = new Float32Array(MAX_LINES * 6);
-        const lineCols = new Float32Array(MAX_LINES * 6);
-        lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
-        lineGeo.setAttribute('color', new THREE.BufferAttribute(lineCols, 3));
-        const lineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending });
-        group.add(new THREE.LineSegments(lineGeo, lineMat));
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 25px 0;">
+        
+        <div class="slider-group">
+            <div class="label-row"><label>Audio Reactivity</label> <span class="value" id="val-react">1.5</span></div>
+            <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
+        </div>
+        
+        <div class="slider-group" id="grp-color">
+            <div class="sync-dot"></div>
+            <div class="label-row"><label>Palette (Mono -> Deep Color)</label> <span class="value" id="val-color">0.2</span></div>
+            <input type="range" id="colorshift" min="0" max="1" step="0.01" value="0.2">
+        </div>
+    </div>
+</div>
 
-        const activeSprites = [];
+<div class="bottom-bar" id="btm-bar">
+    <div class="file-controls">
+        <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC MODE</button>
+        
+        <label for="audio-upload" class="custom-file-btn">
+            📂 LOAD FILE
+        </label>
+        <input type="file" id="audio-upload" accept=".mp3,audio/*" style="display:none" onchange="handleFileSelect(this)">
+        
+        <div id="file-status">MIC ACTIVE</div>
+        <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">❚❚</button>
+    </div>
 
-        function createTexture(text, source, type) {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 512; canvas.height = 256;
-            const p = PALETTES[appState.mode].textCols;
-            const color = p[type] || "#ffffff";
-            const isUpside = appState.mode === 'night';
-            
-            ctx.textAlign = "center"; ctx.textBaseline = "middle";
-            ctx.shadowColor = color; ctx.shadowBlur = isUpside ? 20 : 15;
-            ctx.fillStyle = color;
-            // Safer Font Stack
-            ctx.font = `900 80px "Roboto Slab", "Arial Black", sans-serif`; 
-            ctx.fillText(text, 256, 100);
-            
-            ctx.shadowBlur = 0; ctx.fillStyle = isUpside ? "#ff0000" : "#aaaaaa";
-            ctx.font = `400 24px "Share Tech Mono", monospace`;
-            ctx.fillText(source, 256, 180);
+    <div class="youtube-area">
+        <div id="youtube-placeholder" style="width: 50px; height: 28px; background:#000; overflow:hidden;"><div id="player"></div></div>
+        <div style="flex-grow:1; font-size: 9px; color:#555;">YOUTUBE (NO SYNC ON MOBILE)</div>
+    </div>
+</div>
 
-            return { tex: new THREE.CanvasTexture(canvas), col: new THREE.Color(color) };
+<script>
+    // --- Configuration ---
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB Limit for mobile stability
+
+    // --- State Management ---
+    let state = {
+        running: false, uiHidden: false, 
+        syncMode: false,
+        params: [0.5, 0.3, 0.4], 
+        dynamicParams: [0.5, 0.3, 0.4],
+        global: { react: 1.5, paletteVal: 0.2, dynPalette: 0.2, rot: 0.0 }
+    };
+
+    let myShader, fft, amplitude, mic;
+    let soundFile = null; 
+    let vizCtx; 
+
+    const vert = `
+        attribute vec3 aPosition; attribute vec2 aTexCoord; varying vec2 vTexCoord;
+        void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
+    `;
+
+    // --- FIXED & OPTIMIZED SHADER ---
+    const frag = `
+        precision highp float; 
+        varying vec2 vTexCoord;
+        uniform float u_time; uniform vec2 u_res;
+        uniform vec3 u_params; 
+        uniform float u_react; uniform float u_paletteVal; 
+        uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
+        
+        #define PI 3.14159265359
+        mat2 rot2d(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
+        float hash(vec2 p) { return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x)))); }
+        
+        float noise(vec2 x) {
+            vec2 i = floor(x); vec2 f = fract(x);
+            float a = hash(i); float b = hash(i + vec2(1.0, 0.0));
+            float c = hash(i + vec2(0.0, 1.0)); float d = hash(i + vec2(1.0, 1.0));
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+        
+        float fbm(vec2 x, int oct) {
+            float v = 0.0; float a = 0.5;
+            vec2 shift = vec2(100.0);
+            mat2 rot = rot2d(0.5);
+            for (int i = 0; i < 8; i++) {
+                if(i >= oct) break;
+                v += a * noise(x); x = rot * x * 2.0 + shift; a *= 0.5;
+            }
+            return v;
         }
 
-        function spawnWord() {
-            if(wordBuffer.length === 0) return;
-            const data = wordBuffer.shift();
-            if(wordBuffer.length < 200) wordBuffer.push(data); // Loop buffer
+        vec3 getPalette(float t, float pVal, float bass, float mid) {
+            // Reduced Saturation for deep, non-vivid color
+            vec3 a = vec3(0.3, 0.3, 0.3);
+            vec3 b = vec3(0.3, 0.3, 0.3); 
+            vec3 c = vec3(1.0, 1.0, 1.0);
+            // Bias towards cool tones
+            vec3 d = vec3(0.0, 0.33, 0.67) + (pVal * vec3(0.5, 0.1, 0.0)); 
+            
+            vec3 col = a + b * cos( 6.28318 * (c * t + d) );
+            vec3 col2 = a + b * cos( 6.28318 * (c * t*1.5 + d + vec3(0.2, 0.0, -0.1)) );
+            return mix(col, col2, mid * 0.4);
+        }
 
-            const { tex, col } = createTexture(data.text, data.source, data.type);
-            const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
-            const sprite = new THREE.Sprite(mat);
+        float particle(vec2 uv, vec2 offset, float scale, float n, float z_pos) {
+            vec2 pos = uv - offset;
+            float d = length(pos);
+            float flicker = hash(offset + u_time * 0.5) * 0.5 + 0.5; 
             
-            const range = isMobile ? 600 : 1000;
-            sprite.position.set((Math.random()-0.5)*range, (Math.random()-0.5)*range*0.6, (Math.random()-0.5)*800);
-            const baseS = CONFIG.baseSize * (data.isPriority ? 1.5 : 1.0);
-            sprite.scale.set(baseS * 2, baseS, 1); // Aspect ratio approx 2:1
+            // Perspective scaling: farther away = smaller
+            float size_scale = 1.0 / (1.0 + abs(z_pos * 0.5)); 
             
-            wordGroup.add(sprite);
-            activeSprites.push({
-                mesh: sprite, age: 0, life: CONFIG.wordLife + Math.random()*10000,
-                velocity: new THREE.Vector3((Math.random()-0.5)*0.05, (Math.random()-0.5)*0.05, 0),
-                col: col
+            return 0.05 / (d + 0.001) * smoothstep(scale * size_scale, scale * size_scale * 0.1, d) * flicker; 
+        }
+
+        void main() {
+            vec2 uv = vTexCoord;
+            uv.x *= u_res.x / u_res.y;
+            vec2 centered = uv - 0.5;
+            centered *= rot2d(u_rot * (0.05 + u_vol * 0.05)); 
+            uv = centered + 0.5;
+
+            // Fluid
+            float speed = u_params.x * 0.3; 
+            float bassImpact = u_bass * u_react * 5.0;
+            float warpStrength = 1.0 + u_params.x * 1.0 + bassImpact; 
+            
+            vec2 q = vec2(fbm(uv + u_time * speed, 4), fbm(uv + vec2(5.2, 1.3) + u_time * speed, 4));
+            vec2 r = vec2(fbm(uv + 4.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.5, 4), 
+                          fbm(uv + 4.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.5, 4));
+                          
+            float liquid = fbm(uv + r * warpStrength, 6);
+            liquid = pow(smoothstep(0.1, 0.9, liquid), 1.5);
+
+            // Grid (Enhanced 3D Pop)
+            float gridScale = 4.0 + u_params.y * 35.0; 
+            vec2 gridUV = (uv + r * (0.05 + bassImpact * 0.2)) * gridScale * (1.0 + liquid * 0.05 * u_params.y);
+            
+            float thick = 0.47 + (u_bass * 0.03 * u_react); 
+            float gridLine = smoothstep(thick, 0.5, abs(fract(gridUV.x + u_time*0.05) - 0.5));
+            gridLine += smoothstep(thick, 0.5, abs(fract(gridUV.y - u_time*0.03) - 0.5));
+            float structure = gridLine * min(u_params.y, 0.8) * (1.0 + bassImpact * 0.5); 
+
+            // Particles (Free Flowing & Stereoscopic)
+            float particles = 0.0;
+            float particleGridScale = 8.0 + u_params.z * 15.0;
+            vec2 pUV = uv * particleGridScale;
+            vec2 pID = floor(pUV);
+            
+            // Add persistent screen-wide flow field offset
+            float global_flow_speed = 0.1 + u_vol * 0.2;
+            vec2 global_flow_offset = vec2(u_time * global_flow_speed, u_time * global_flow_speed * 0.5);
+            vec2 offset_pID = floor(pUV - global_flow_offset); // Base ID influenced by continuous flow
+
+            pUV = fract(pUV) - 0.5;
+
+            // Loop now uses the offset ID for consistent, non-tiling flow perception
+            for(int y=-1; y<=1; y++) {
+                for(int x=-1; x<=1; x++) {
+                    vec2 neighbor = vec2(float(x), float(y));
+                    vec2 id = offset_pID + neighbor;
+                    float n = hash(id);
+                    
+                    float z_offset = hash(id + vec2(100.0));
+                    float z_pos = 2.0 * z_offset - 1.0; 
+                    
+                    float moveSpeed = u_time * (0.5 + n) + u_treble * u_react * 1.5;
+                    float posX = sin(moveSpeed + n * 6.28) * (0.3 + u_treble * 0.2);
+                    float posY = cos(moveSpeed + n * 6.28) * (0.3 + u_treble * 0.2);
+                    
+                    float perspective_scale = 1.0 / (1.0 + z_pos * 0.5); 
+                    
+                    // Position is now relative to the flowing cell, and scaled by depth
+                    vec2 pOffset = (neighbor + vec2(posX, posY) - fract(global_flow_offset) ) * perspective_scale; 
+                    
+                    float pSize = (0.08 + u_params.z * 0.15) * (1.0 + u_treble * u_react * 2.0) * n;
+                    particles += particle(pUV, pOffset, pSize, n, z_pos);
+                }
+            }
+            particles *= min(u_params.z * 1.5, 1.0); 
+
+            // Mix
+            vec3 col = getPalette(liquid + u_bass * 0.2, u_paletteVal, u_bass, u_mid);
+            vec3 structCol = vec3(0.0, 0.8, 1.0) * (0.5 + u_bass*0.5) * (1.0 + u_paletteVal); 
+            
+            col = mix(col, structCol * 1.5, structure * 0.7); 
+            col += vec3(particles * 2.0) * structCol; 
+
+            // Post Processing
+            vec3 finalCol = col;
+            float aber = u_vol * u_react * 0.02;
+            finalCol.r = mix(col.r, col.r * 1.1, aber);
+            
+            float satFactor = smoothstep(0.0, 0.2, u_paletteVal);
+            float gray = dot(finalCol, vec3(0.299, 0.587, 0.114));
+            float noirContrast = 1.0 + (1.0 - satFactor) * 0.5; 
+            vec3 noirGray = vec3(pow(gray, noirContrast));
+            finalCol = mix(noirGray, finalCol, satFactor);
+
+            float vig = 1.0 - smoothstep(0.3, 1.8, length(vTexCoord - 0.5) * 1.5);
+            finalCol *= vig;
+            finalCol += (hash(uv + u_time) - 0.5) * 0.05;
+            finalCol = finalCol / (finalCol + vec3(0.6));
+            finalCol = pow(finalCol, vec3(1.0/1.8)); 
+
+            gl_FragColor = vec4(finalCol, 1.0);
+        }
+    `;
+
+    // --- YouTube API ---
+    let player;
+    function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+            height: '100%', width: '100%', videoId: 'jfKfPfyJRdk',
+            playerVars: { 'playsinline': 1, 'controls': 1 }
+        });
+    }
+
+    // --- Setup ---
+    function setup() {
+        let cnv = createCanvas(windowWidth, windowHeight, WEBGL);
+        cnv.style('z-index', '1'); 
+        cnv.id('defaultCanvas0');
+        noStroke();
+        myShader = createShader(vert, frag);
+        
+        mic = new p5.AudioIn();
+        fft = new p5.FFT(0.8, 32); 
+        amplitude = new p5.Amplitude(); 
+        
+        // Default mic
+        fft.setInput(mic);
+        amplitude.setInput(mic);
+        
+        const vC = document.getElementById('viz-canvas');
+        vizCtx = vC.getContext('2d');
+
+        ['param1', 'param2', 'param3', 'reactivity', 'colorshift'].forEach((id, i) => {
+            const el = document.getElementById(id);
+            el.addEventListener('input', (e) => {
+                let val = parseFloat(e.target.value);
+                if (i < 3) state.params[i] = val;
+                else if (i === 3) state.global.react = val;
+                else state.global.paletteVal = val; 
+                e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
             });
-        }
-
-        const simplex = new SimplexNoise();
-        let time = 0;
-
-        function animate() {
-            requestAnimationFrame(animate);
-            time += 0.001; 
-
-            // Bg Lerp
-            if(appState.targetPalette && appState.currentBgCols.length > 0) {
-                for(let i = 0; i < appState.currentBgCols.length; i++) {
-                    appState.currentBgCols[i].lerp(appState.targetPalette[i], 0.005);
-                    document.body.style.setProperty(`--c${i+1}`, `#${appState.currentBgCols[i].getHexString()}`);
-                }
-                fogCol.lerp(appState.targetFogCol, 0.005);
-                scene.fog.color.copy(fogCol);
-            }
-            scene.background = fogCol;
-
-            // Upside Down Effects
-            const isUpside = appState.mode === 'night';
-            pMat.color.setHex(isUpside ? 0xaa8888 : 0xffffee);
-            lineMat.color.setHex(isUpside ? 0xff0000 : 0xffffff);
-            lineMat.opacity = isUpside ? 0.4 : 0.2;
-            group.rotation.y = time * 0.05;
-
-            // Sprites Logic
-            let lineIdx = 0;
-            const connectSq = CONFIG.connectDist * CONFIG.connectDist;
-
-            for(let i = activeSprites.length - 1; i >= 0; i--) {
-                const s = activeSprites[i]; s.age += 16;
-                
-                // Fade In/Out
-                let op = 1;
-                if(s.age < 2000) op = s.age / 2000;
-                else if (s.age > s.life - 2000) op = (s.life - s.age) / 2000;
-                
-                const flicker = isUpside ? (Math.random() > 0.9 ? 0.2 : 1) : 1;
-                s.mesh.material.opacity = op * flicker;
-                s.mesh.position.add(s.velocity);
-                s.mesh.position.y += simplex.noise3D(s.mesh.position.x*0.001, s.mesh.position.y*0.001, time) * 0.1;
-
-                if(s.age > s.life) { wordGroup.remove(s.mesh); s.mesh.material.map.dispose(); s.mesh.material.dispose(); activeSprites.splice(i, 1); continue; }
-
-                // Lines
-                if(s.mesh.material.opacity > 0.1) {
-                    for(let k=1; k<3; k++) {
-                        const j = (i + k*4) % activeSprites.length;
-                        if(i===j) continue;
-                        const s2 = activeSprites[j];
-                        const d2 = s.mesh.position.distanceToSquared(s2.mesh.position);
-                        if(d2 < connectSq) {
-                            if(lineIdx < MAX_LINES * 6) {
-                                const p1=s.mesh.position; const p2=s2.mesh.position;
-                                linePos[lineIdx++]=p1.x; linePos[lineIdx++]=p1.y; linePos[lineIdx++]=p1.z;
-                                linePos[lineIdx++]=p2.x; linePos[lineIdx++]=p2.y; linePos[lineIdx++]=p2.z;
-                                lineCols[lineIdx-6] = s.col.r; lineCols[lineIdx-5] = s.col.g; lineCols[lineIdx-4] = s.col.b;
-                                lineCols[lineIdx-3] = s2.col.r; lineCols[lineIdx-2] = s2.col.g; lineCols[lineIdx-1] = s2.col.b;
-                            }
-                        }
-                    }
-                }
-            }
-            lineGeo.setDrawRange(0, lineIdx/3);
-            lineGeo.attributes.position.needsUpdate = true;
-            lineGeo.attributes.color.needsUpdate = true;
-
-            camera.rotation.z = Math.sin(time * 0.2) * 0.02;
-            renderer.render(scene, camera);
-        }
-
-        function spawnLoop() {
-            spawnWord();
-            setTimeout(spawnLoop, CONFIG.spawnRate);
-        }
-
-        document.getElementById('start-btn').addEventListener('click', async () => {
-            document.getElementById('overlay').style.opacity = 0;
-            setTimeout(() => document.getElementById('overlay').remove(), 1500);
-            
-            await Audio.init();
-            const now = new Date();
-            const h = now.getHours();
-            appState.mode = (h >= 6 && h < 18) ? 'day' : 'night';
-            
-            setInitialCurrentBgCols(appState.mode);
-            setTargetPalette(appState.mode);
-            updateHUDColors(appState.mode);
-            Audio.setMode(appState.mode);
-
-            fetchEnv();
-            fetchFeeds(); // Data Fetch
-            spawnLoop();  // Visual Loop
-            animate();    // Render Loop
         });
+    }
 
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth/window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+    function initApp() {
+        userStartAudio(); 
+        mic.start(); 
+        state.running = true;
+        const ov = document.getElementById('overlay');
+        ov.style.opacity = 0;
+        setTimeout(()=> ov.style.display='none', 500);
+    }
+
+    // --- Audio Source Switching ---
+
+    function switchToMic() {
+        if (soundFile && soundFile.isPlaying()) {
+            soundFile.stop();
+            document.getElementById('play-btn').style.display = "none";
+        }
+        mic.start();
+        fft.setInput(mic);
+        amplitude.setInput(mic);
+        document.getElementById('file-status').innerText = "MIC ACTIVE";
+        if(!state.syncMode) toggleSync();
+    }
+    
+    function handleFileSelect(fileInput) {
+        if (fileInput.files.length === 0) return;
+        const file = fileInput.files[0];
+        const statusEl = document.getElementById('file-status');
+        
+        if (file.size > MAX_FILE_SIZE) {
+            statusEl.innerText = "ERROR: FILE TOO LARGE (>20MB)";
+            alert("ファイルがデカすぎます（20MBまで）。別のファイルを選んでください。");
+            return;
+        }
+
+        statusEl.innerText = "LOADING...";
+        if(soundFile && soundFile.isPlaying()) soundFile.stop();
+        if(player && player.pauseVideo) player.pauseVideo();
+
+        const blobUrl = URL.createObjectURL(file);
+        soundFile = loadSound(blobUrl, () => {
+            statusEl.innerText = file.name.toUpperCase();
+            document.getElementById('play-btn').style.display = "flex";
+            mic.stop();
+            soundFile.play();
+            soundFile.setLoop(true);
+            fft.setInput(soundFile);
+            amplitude.setInput(soundFile);
+            if(!state.syncMode) toggleSync();
+            URL.revokeObjectURL(blobUrl);
+        }, (err) => {
+            console.error(err);
+            statusEl.innerText = "ERROR LOADING FILE";
+            alert("読み込みエラー: このファイル形式は利用できません。");
         });
-    </script>
+    }
+
+    function togglePlay() {
+        if(soundFile && soundFile.isLoaded()) {
+            if(soundFile.isPlaying()) {
+                soundFile.pause();
+                document.getElementById('play-btn').innerText = "▶";
+            } else {
+                soundFile.play();
+                document.getElementById('play-btn').innerText = "❚❚";
+            }
+        }
+    }
+
+    let rotAccumulator = 0;
+
+    function draw() {
+        if (!state.running && millis() < 1000) return;
+
+        let spectrum = fft.analyze();
+        let bass = fft.getEnergy("bass") / 255.0;     
+        let mid = fft.getEnergy("mid") / 255.0;
+        let treble = fft.getEnergy("treble") / 255.0 * 1.5; 
+        let vol = amplitude.getLevel();
+
+        if (!state.uiHidden) {
+            vizCtx.clearRect(0, 0, 230, 40);
+            vizCtx.fillStyle = state.syncMode ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.2)';
+            let barW = 230 / spectrum.length;
+            for (let i = 0; i < spectrum.length; i++) {
+                let h = (spectrum[i] / 255) * 38 * (0.5 + vol * 1.5); 
+                vizCtx.fillRect(i * barW, 40 - h, barW - 1, h);
+            }
+        }
+
+        let targetP = [0, 0, 0];
+        let targetPal = state.global.paletteVal;
+
+        if (state.syncMode) {
+            targetP[0] = state.params[0] + (vol * 4.0); 
+            targetP[1] = state.params[1] + (bass * 3.0 * state.global.react); 
+            targetP[2] = state.params[2] + (treble * 2.5 * state.global.react);
+            
+            if (state.global.paletteVal > 0.15) {
+                targetPal = state.global.paletteVal + (mid * 0.3 * state.global.react) + (bass * 0.1);
+            }
+            rotAccumulator += (0.001 + vol * 0.12); 
+        } else {
+            targetP = [...state.params];
+            rotAccumulator += 0.0005;
+        }
+
+        for(let i=0; i<3; i++) {
+            state.dynamicParams[i] = lerp(state.dynamicParams[i], targetP[i], 0.05);
+            state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
+        }
+        state.global.dynPalette = lerp(state.global.dynPalette, targetPal, 0.03);
+        
+        shader(myShader);
+        myShader.setUniform('u_res', [width, height]); 
+        myShader.setUniform('u_time', millis() / 1000.0);
+        myShader.setUniform('u_params', state.dynamicParams);
+        myShader.setUniform('u_react', state.global.react); 
+        myShader.setUniform('u_paletteVal', state.global.dynPalette);
+        myShader.setUniform('u_rot', rotAccumulator);
+        myShader.setUniform('u_bass', bass); 
+        myShader.setUniform('u_mid', mid);
+        myShader.setUniform('u_treble', treble);
+        myShader.setUniform('u_vol', vol);
+        
+        rect(-width/2, -height/2, width, height);
+    }
+
+    window.toggleUI = () => {
+        state.uiHidden = !state.uiHidden;
+        document.getElementById('ctrl-panel').classList.toggle('hidden', state.uiHidden);
+        document.getElementById('btm-bar').classList.toggle('hidden', state.uiHidden);
+        document.querySelector('.header').style.opacity = state.uiHidden ? '0' : '1';
+        document.querySelector('.toggle-btn-fixed').innerText = state.uiHidden ? '☰' : '✕';
+    };
+    
+    window.toggleSync = () => {
+        state.syncMode = !state.syncMode;
+        const btn = document.getElementById('sync-btn');
+        const lbl = btn.querySelector('.switch-label');
+        if(state.syncMode) {
+            btn.classList.add('active'); 
+            lbl.innerText = "AUDIO SYNC: ON";
+            document.querySelectorAll('.slider-group').forEach(el => el.classList.add('sync-active'));
+        } else {
+            btn.classList.remove('active'); 
+            lbl.innerText = "AUDIO SYNC: OFF";
+            document.querySelectorAll('.slider-group').forEach(el => el.classList.remove('sync-active'));
+        }
+    };
+    
+    function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+</script>
 </body>
 </html>
