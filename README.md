@@ -3,24 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v7.4 Seek & Fix</title>
+    <title>Aether VJ v9.5 Full Cockpit</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
         /* --- Base Styling --- */
         body { margin: 0; padding: 0; background: #000; overflow: hidden; font-family: 'Helvetica Neue', sans-serif; color: #ccc; }
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        
         canvas { display: block; position: fixed; top: 0; left: 0; z-index: 1; pointer-events: none; }
+
+        /* --- YouTube Layer --- */
+        #yt-wrapper {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 2; pointer-events: none; 
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden; transition: opacity 0.3s;
+        }
+        #yt-wrapper.interactive { pointer-events: auto; cursor: pointer; border: 2px solid #0f0; }
+        #yt-player { width: 100%; height: 100%; }
 
         /* --- UI Layer --- */
         #ui-container {
             position: fixed; inset: 0; pointer-events: none; z-index: 100;
-            display: flex; flex-direction: column; justify-content: space-between;
+            /* Removed flex layout to allow absolute positioning of panel */
             padding: 25px;
         }
 
-        .header { display: flex; align-items: flex-start; justify-content: space-between; pointer-events: auto; }
-        .title-group { display: flex; flex-direction: column; gap: 10px; }
+        .header { 
+            position: absolute; top: 25px; left: 25px;
+            display: flex; align-items: flex-start; justify-content: space-between; 
+            pointer-events: auto; z-index: 102;
+        }
+        .title-group { display: flex; flex-direction: column; gap: 8px; }
         .title-row { display: flex; align-items: center; gap: 15px; }
         
         .reload-btn {
@@ -56,31 +71,60 @@
         }
         .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
 
-        /* Controls Panel */
+        /* --- COCKPIT PANEL (RIGHT SIDE, FULL HEIGHT) --- */
         .controls-panel {
             pointer-events: auto;
-            background: rgba(10,10,10,0.85); 
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            bottom: 100px; /* Space for bottom bar */
+            width: 520px; /* WIDE enough for 2 cols */
+            
+            background: rgba(10,10,10,0.92); 
             backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
-            padding: 20px; width: 280px; align-self: flex-end;
-            margin-bottom: 120px; /* Increased margin for progress bar */
-            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+            padding: 20px; 
+            
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+            box-shadow: -10px 0 80px rgba(0,0,0,0.8);
             z-index: 101;
-            max-height: 60vh; overflow-y: auto;
+            
+            overflow-y: auto; /* Auto scroll only if screen is too short */
+            scrollbar-width: thin; scrollbar-color: #444 #111;
+            
+            display: flex;
+            flex-direction: column;
         }
-        .controls-panel.hidden { transform: translateX(calc(100% + 50px)); opacity: 0; pointer-events: none; }
+        .controls-panel.hidden { transform: translateX(120%); opacity: 0; pointer-events: none; }
+        .controls-panel::-webkit-scrollbar { width: 4px; }
+        .controls-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        /* Grid Layout for Columns */
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Two equal columns */
+            gap: 25px; /* Space between columns */
+            flex: 1; /* Fill remaining height */
+        }
 
         #viz-canvas {
-            width: 100%; height: 40px; background: rgba(0,0,0,0.3);
-            border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
-            border-radius: 2px; display: block;
+            width: 100%; height: 30px; background: rgba(0,0,0,0.3);
+            border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;
+            border-radius: 2px; display: block; flex-shrink: 0;
         }
 
-        .slider-group { margin-bottom: 16px; position: relative; }
-        .label-row { display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center; }
-        label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
-        .value { font-size: 9px; font-family: 'Courier New', monospace; color: #bbb; }
+        .section-title {
+            font-size: 11px; color: #0ff; font-weight: bold; letter-spacing: 1px;
+            margin: 0 0 10px 0; padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0,255,255,0.3);
+            text-transform: uppercase; 
+        }
+        .section-spacer { margin-top: 18px; }
+
+        .slider-group { margin-bottom: 12px; position: relative; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center; }
+        label { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+        .value { font-size: 10px; font-family: 'Courier New', monospace; color: #eee; }
         
         .sync-dot {
             position: absolute; right: -8px; top: 2px; width: 4px; height: 4px; background: #0ff; border-radius: 50%;
@@ -89,22 +133,32 @@
         .sync-active .sync-dot { opacity: 1.0; }
 
         input[type=range] { 
-            width: 100%; -webkit-appearance: none; background: transparent; height: 20px; 
+            width: 100%; -webkit-appearance: none; background: transparent; height: 14px; 
             cursor: pointer; margin: 0; touch-action: none; position: relative; z-index: 200; 
         }
         input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 2px; background: rgba(255,255,255,0.2); border-radius: 2px;}
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%;
-            background: #111; margin-top: -6px; box-shadow: 0 0 0 1px rgba(255,255,255,0.8); transition: transform 0.1s; 
+            -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%;
+            background: #111; margin-top: -5px; box-shadow: 0 0 0 1px rgba(255,255,255,0.8); transition: transform 0.1s; 
         }
         input[type=range]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.2); }
 
-        select {
+        select, input[type=text] {
             width: 100%; background: rgba(0,0,0,0.5); color: #0ff; border: 1px solid rgba(0,255,255,0.3);
-            padding: 4px; font-size: 10px; border-radius: 4px; outline: none; cursor: pointer;
+            padding: 6px; font-size: 11px; border-radius: 4px; outline: none; cursor: pointer;
             font-family: 'Courier New', monospace; text-transform: uppercase;
         }
         select option { background: #111; color: #ccc; }
+        input[type=text] { cursor: text; margin-bottom: 8px; }
+        input[type=text]::placeholder { color: #555; }
+
+        .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .small-btn {
+            background: #222; border: 1px solid rgba(255,255,255,0.2); color: #fff;
+            padding: 6px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; flex: 1;
+            text-transform: uppercase; transition: 0.2s;
+        }
+        .small-btn:hover { background: #444; border-color: #0ff; }
 
         .toggle-btn-fixed {
             position: fixed; top: 25px; right: 25px; z-index: 200; pointer-events: auto;
@@ -123,16 +177,11 @@
         }
         .bottom-bar.hidden { transform: translateY(120%); }
 
-        /* Progress Bar Styles */
         #progress-container {
             padding: 15px 20px 0 20px; display: none; flex-direction: column; gap: 5px;
         }
-        #seek-slider {
-            width: 100%; height: 20px; cursor: pointer;
-        }
-        #seek-slider::-webkit-slider-thumb {
-            background: #0ff; box-shadow: 0 0 10px #0ff;
-        }
+        #seek-slider { width: 100%; height: 20px; cursor: pointer; }
+        #seek-slider::-webkit-slider-thumb { background: #0ff; box-shadow: 0 0 10px #0ff; }
         .time-labels {
             display: flex; justify-content: space-between;
             font-family: 'Courier New', monospace; font-size: 10px; color: #0ff;
@@ -173,8 +222,11 @@
         }
         .bottom-bar.hidden ~ .key-tip { opacity: 0; }
 
-        @media (max-width: 600px) {
-            .controls-panel { width: 100%; margin-bottom: 120px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
+        @media (max-width: 750px) {
+            .controls-panel { width: 100%; top:auto; right:0; left:0; bottom: 120px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1); height: 60vh; }
+            .panel-grid { grid-template-columns: 1fr; gap: 0; }
+            .section-spacer { margin-top: 20px; }
+            .header { position: relative; top: 0; left: 0; }
         }
     </style>
 </head>
@@ -182,10 +234,14 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START v7.4</div>
+    <div class="sub-text">START v9.5</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
+
+<div id="yt-wrapper">
+    <div id="yt-player"></div>
+</div>
 
 <div id="ui-container">
     <div class="header">
@@ -202,113 +258,147 @@
     </div>
 
     <div class="controls-panel" id="ctrl-panel">
-        <canvas id="viz-canvas" width="230" height="40"></canvas>
+        <canvas id="viz-canvas" width="480" height="30"></canvas>
 
-        <div class="slider-group" id="grp-1">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Flow (Speed Limit)</label> <span class="value" id="val-1">0.5</span></div>
-            <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
-        </div>
+        <div class="panel-grid">
+            <div class="col-left">
+                <div class="section-title">GLOBAL</div>
+                <div class="slider-group" id="grp-1">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Flow (Speed)</label> <span class="value" id="val-1">0.5</span></div>
+                    <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
+                </div>
+                <div class="slider-group">
+                    <div class="label-row"><label>Reactivity (Audio)</label> <span class="value" id="val-react">1.5</span></div>
+                    <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
+                </div>
+                <div class="slider-group" style="margin-bottom: 12px;">
+                    <div class="label-row"><label id="paletteLabel">Color Palette</label></div>
+                    <select id="paletteSelect">
+                        <option value="0">Rainbow (Classic)</option>
+                        <option value="1">Cyberpunk (Pk/Cy)</option>
+                        <option value="2">Heatwave (Rd/Or)</option>
+                        <option value="3">Deep Ocean (Bl/Aq)</option>
+                        <option value="4">Forest Neon (Gr/Li)</option>
+                    </select>
+                </div>
+                <div class="slider-group" id="grp-saturation">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Saturation</label> <span class="value" id="val-saturation">0.8</span></div>
+                    <input type="range" id="saturationSlider" min="0" max="1" step="0.01" value="0.8">
+                </div>
 
-        <div class="slider-group" style="margin-bottom: 12px;">
-            <div class="label-row"><label id="paletteLabel">Color Palette</label></div>
-            <select id="paletteSelect">
-                <option value="0">Rainbow (Classic)</option>
-                <option value="1">Cyberpunk (Pk/Cy)</option>
-                <option value="2">Heatwave (Rd/Or)</option>
-                <option value="3">Deep Ocean (Bl/Aq)</option>
-                <option value="4">Forest Neon (Gr/Li)</option>
-            </select>
-        </div>
-
-        <div class="slider-group" id="grp-saturation">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Saturation (Mono↔Color)</label> <span class="value" id="val-saturation">0.8</span></div>
-            <input type="range" id="saturationSlider" min="0" max="1" step="0.01" value="0.8">
-        </div>
-
-        <div class="slider-group" id="grp-3">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Float (Particles)</label> <span class="value" id="val-3">0.4</span></div>
-            <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
-        </div>
-
-        <div class="slider-group" id="grp-grid-size">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Grid Size (Zoom)</label> <span class="value" id="val-grid-size">0.5</span></div>
-            <input type="range" id="gridSize" min="0" max="1" step="0.01" value="0.5">
-        </div>
-
-        <div class="slider-group" id="grp-grid-line">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Grid Line (Weight)</label> <span class="value" id="val-grid-line">0.3</span></div>
-            <input type="range" id="gridLine" min="0" max="1" step="0.01" value="0.3">
-        </div>
-
-        <div class="slider-group" id="grp-2">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Grid (Distortion)</label> <span class="value" id="val-2">0.3</span></div>
-            <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
-        
-        <label style="color:#0ff; margin-bottom:8px; display:block;">BORDER FX</label>
-        
-        <div class="slider-group" id="grp-border-width">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Border Width</label> <span class="value" id="val-border-width">0.0</span></div>
-            <input type="range" id="borderWidth" min="0" max="0.5" step="0.01" value="0.0">
-        </div>
-
-        <div class="slider-group" id="grp-border-density">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Border Density</label> <span class="value" id="val-border-density">5.0</span></div>
-            <input type="range" id="borderDensity" min="1" max="20" step="0.1" value="5.0">
-        </div>
-
-        <div class="slider-group" id="grp-border-alpha">
-            <div class="sync-dot"></div>
-            <div class="label-row"><label>Border Alpha</label> <span class="value" id="val-border-alpha">0.8</span></div>
-            <input type="range" id="borderAlpha" min="0" max="1" step="0.01" value="0.8">
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
-
-        <div class="slider-group" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <label style="margin:0;">IMAGE OVERLAY</label>
-            <div class="mini-switch active" id="img-toggle-btn" onclick="toggleImgVisibility()">
-                <div class="mini-indicator"></div>
+                <div class="section-title section-spacer">GRID SYSTEM</div>
+                <div class="slider-group" id="grp-grid-size">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Grid Zoom</label> <span class="value" id="val-grid-size">0.5</span></div>
+                    <input type="range" id="gridSize" min="0" max="1" step="0.01" value="0.5">
+                </div>
+                <div class="slider-group" id="grp-grid-line">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Line Weight</label> <span class="value" id="val-grid-line">0.3</span></div>
+                    <input type="range" id="gridLine" min="0" max="1" step="0.01" value="0.3">
+                </div>
+                <div class="slider-group" id="grp-2">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Distortion</label> <span class="value" id="val-2">0.3</span></div>
+                    <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
+                </div>
+                <div class="slider-group" id="grp-3">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Particles</label> <span class="value" id="val-3">0.4</span></div>
+                    <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
+                </div>
             </div>
-        </div>
 
-        <div class="slider-group" id="grp-img-size">
-            <div class="label-row"><label>Image Scale</label> <span class="value" id="val-img-size">0.5</span></div>
-            <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
-        </div>
+            <div class="col-right">
+                <div class="section-title">BORDER FX</div>
+                <div class="slider-group" id="grp-border-width">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Width</label> <span class="value" id="val-border-width">0.0</span></div>
+                    <input type="range" id="borderWidth" min="0" max="0.5" step="0.01" value="0.0">
+                </div>
+                <div class="slider-group" id="grp-border-density">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Density</label> <span class="value" id="val-border-density">5.0</span></div>
+                    <input type="range" id="borderDensity" min="1" max="20" step="0.1" value="5.0">
+                </div>
+                <div class="slider-group" id="grp-border-distortion">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Distortion</label> <span class="value" id="val-border-distortion">0.5</span></div>
+                    <input type="range" id="borderDistortion" min="0" max="1" step="0.01" value="0.5">
+                </div>
+                <div class="slider-group" id="grp-border-alpha">
+                    <div class="sync-dot"></div>
+                    <div class="label-row"><label>Alpha</label> <span class="value" id="val-border-alpha">0.8</span></div>
+                    <input type="range" id="borderAlpha" min="0" max="1" step="0.01" value="0.8">
+                </div>
 
-        <div class="slider-group" id="grp-img-opacity">
-            <div class="label-row"><label>Image Opacity</label> <span class="value" id="val-img-opacity">1.0</span></div>
-            <input type="range" id="imgOpacityParam" min="0" max="1" step="0.01" value="1.0">
-        </div>
+                <div class="section-title section-spacer">LAYERS (YT & IMG)</div>
+                
+                <div class="slider-group" style="margin-bottom:8px;">
+                    <input type="text" id="yt-url" placeholder="YouTube ID/URL">
+                    <div class="btn-row">
+                        <button class="small-btn" onclick="loadYouTube()">LOAD</button>
+                        <button class="small-btn" onclick="clearYouTube()">CLEAR</button>
+                        <div class="mini-switch" id="yt-interact-btn" onclick="toggleYTInteract()" title="Click Interact">
+                            <div class="mini-indicator"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="slider-group">
+                        <div class="label-row"><label>YT Size</label> <span class="value" id="val-yt-size">0.5</span></div>
+                        <input type="range" id="ytSize" min="0.1" max="1.5" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="label-row"><label>YT Opacity</label> <span class="value" id="val-yt-opacity">0.5</span></div>
+                        <input type="range" id="ytOpacity" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="label-row"><label>YT Pos X / Y</label></div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="range" id="ytXParam" min="-1" max="1" step="0.01" value="0.0">
+                        <input type="range" id="ytYParam" min="-1" max="1" step="0.01" value="0.0">
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <select id="ytBlend" style="margin-top:5px;">
+                        <option value="normal">Normal</option>
+                        <option value="screen">Screen (Add)</option>
+                        <option value="overlay">Overlay</option>
+                        <option value="difference">Difference</option>
+                        <option value="multiply">Multiply</option>
+                    </select>
+                </div>
 
-        <div class="slider-group">
-            <div class="label-row"><label>Image X (Pos)</label> <span class="value" id="val-img-x">0.0</span></div>
-            <input type="range" id="imgXParam" min="-1" max="1" step="0.01" value="0.0">
-        </div>
+                <div class="slider-group" style="display:flex; justify-content: space-between; align-items: center; margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                    <label style="margin:0;">IMAGE LAYER</label>
+                    <div class="mini-switch active" id="img-toggle-btn" onclick="toggleImgVisibility()">
+                        <div class="mini-indicator"></div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="slider-group">
+                        <div class="label-row"><label>Size</label> <span class="value" id="val-img-size">0.5</span></div>
+                        <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="label-row"><label>Opacity</label> <span class="value" id="val-img-opacity">1.0</span></div>
+                        <input type="range" id="imgOpacityParam" min="0" max="1" step="0.01" value="1.0">
+                    </div>
+                </div>
+                <div class="slider-group">
+                    <div class="label-row"><label>Img Pos X / Y</label></div>
+                    <div style="display:flex; gap:10px;">
+                        <input type="range" id="imgXParam" min="-1" max="1" step="0.01" value="0.0">
+                        <input type="range" id="imgYParam" min="-1" max="1" step="0.01" value="0.0">
+                    </div>
+                </div>
 
-        <div class="slider-group">
-            <div class="label-row"><label>Image Y (Pos)</label> <span class="value" id="val-img-y">0.0</span></div>
-            <input type="range" id="imgYParam" min="-1" max="1" step="0.01" value="0.0">
-        </div>
-        
-        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
-
-        <div class="slider-group">
-            <div class="label-row"><label>Reactivity (↕)</label> <span class="value" id="val-react">1.5</span></div>
-            <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
-        </div>
-    </div>
+            </div> </div> </div>
 </div>
 
 <div class="bottom-bar" id="btm-bar">
@@ -327,13 +417,27 @@
         <div id="file-status">MIC MODE</div>
         <label for="audio-upload" class="custom-file-btn">📂 FILE</label>
         <input type="file" id="audio-upload" accept=".mp3,audio/*" style="display:none" onchange="handleFileSelect(this)">
-        <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">❚❚</button>
+        <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">▶</button>
     </div>
 </div>
-<div class="key-tip">KEYBOARD: ↔ SATURATION &nbsp;|&nbsp; ↕ REACTIVITY</div>
+<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | ENTER=UI | ARROWS=FX</div>
 
 <script>
     const MAX_FILE_SIZE = 20 * 1024 * 1024; 
+
+    // Inject YouTube API
+    var tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    var firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+    let ytPlayer;
+    let ytReady = false;
+
+    window.onYouTubeIframeAPIReady = function() {
+        ytReady = true;
+        console.log("YT API Ready");
+    }
 
     let state = {
         running: false, uiHidden: false, 
@@ -345,29 +449,26 @@
             saturation: 0.8, colorMode: 0, 
             rot: 0.0, imgSize: 0.5, imgOpacity: 1.0, 
             imgX: 0.0, imgY: 0.0, imgVisible: true,
-            // Border Params
-            borderWidth: 0.0, borderDensity: 5.0, borderAlpha: 0.8
+            borderWidth: 0.0, borderDensity: 5.0, borderAlpha: 0.8, borderDistortion: 0.5,
+            ytSize: 0.5, ytOpacity: 0.5, ytBlend: 'normal', ytInteractive: false,
+            ytX: 0.0, ytY: 0.0
         },
-        // Dynamic Border Params for Sync
-        dynamicBorder: { width: 0.0, density: 5.0, alpha: 0.8 },
+        dynamicBorder: { width: 0.0, density: 5.0, alpha: 0.8, distortion: 0.5 },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
-        customTime: 0,
-        drift: 0,
-        paletteTime: 0
+        customTime: 0, drift: 0, paletteTime: 0
     };
 
     let myShader, fft, amplitude, mic;
     let soundFile = null;
     let centerImg = null; 
     let vizCtx; 
-    let isScrubbing = false; // To track if user is dragging slider
+    let isScrubbing = false; 
 
     const vert = `
         attribute vec3 aPosition; attribute vec2 aTexCoord; varying vec2 vTexCoord;
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- SHADER: PALETTE MORPHING + WAVING BROKEN BORDER ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
@@ -382,13 +483,10 @@
         uniform float u_lineWeight; 
         uniform float u_drift; 
         uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
-        
-        uniform vec3 u_borderParams; // x=width, y=density, z=alpha
-        
+        uniform vec4 u_borderParams;
         #define PI 3.14159265359
         mat2 rot2d(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
         float hash(vec2 p) { return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x)))); }
-        
         float noise(vec2 x) {
             vec2 i = floor(x); vec2 f = fract(x);
             float a = hash(i); float b = hash(i + vec2(1.0, 0.0));
@@ -396,7 +494,6 @@
             vec2 u = f * f * (3.0 - 2.0 * f);
             return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
         }
-        
         float fbm(vec2 x, int oct) {
             float v = 0.0; float a = 0.5;
             vec2 shift = vec2(100.0);
@@ -407,40 +504,35 @@
             }
             return v;
         }
-
         vec3 getRainbow(float t, float shift) {
-            vec3 a = vec3(0.5, 0.5, 0.5);
-            vec3 b = vec3(0.5, 0.5, 0.5); 
-            vec3 c = vec3(1.0, 1.0, 1.0);
-            vec3 d = vec3(0.0, 0.33, 0.67) + shift; 
+            vec3 a = vec3(0.5, 0.5, 0.5); vec3 b = vec3(0.5, 0.5, 0.5); 
+            vec3 c = vec3(1.0, 1.0, 1.0); vec3 d = vec3(0.0, 0.33, 0.67) + shift; 
             return a + b * cos( 6.28318 * (c * t + d) );
         }
-
         void getThemeColors(int mode, float t, float audioBoost, out vec3 colBG, out vec3 colStruct, out vec3 colPart) {
             float beat = audioBoost * 0.5;
-            if (mode == 0) { // Rainbow
+            if (mode == 0) {
                  colBG = getRainbow(t + beat * 0.2, u_drift * 0.1);
                  colStruct = vec3(0.2, 0.9, 1.0) + beat * 0.3; 
                  colPart = getRainbow(t + 0.5 + beat * 0.3, 0.1);
-            } else if (mode == 1) { // Cyberpunk
+            } else if (mode == 1) {
                  colBG = mix(vec3(0.1, 0.0, 0.2), vec3(0.6, 0.0, 0.5), sin(t + beat)*0.5+0.5);
                  colStruct = vec3(0.0, 0.9, 1.0) * (1.0 + beat);
                  colPart = vec3(1.0, 0.2, 0.6) + beat * 0.5;
-            } else if (mode == 2) { // Heatwave
+            } else if (mode == 2) {
                  colBG = mix(vec3(0.2, 0.0, 0.0), vec3(0.5, 0.1, 0.0), sin(t*0.7 + beat)*0.5+0.5);
                  colStruct = vec3(1.0, 0.5 + beat*0.5, 0.0); 
                  colPart = vec3(1.0, 0.8, 0.2) * (1.0 + beat*2.0);
-            } else if (mode == 3) { // Deep Ocean
+            } else if (mode == 3) {
                  colBG = mix(vec3(0.0, 0.05, 0.2), vec3(0.0, 0.2, 0.4), sin(t*0.5 + beat*0.2)*0.5+0.5);
                  colStruct = vec3(0.0, 0.7, 0.8) * (0.8 + beat*0.4);
                  colPart = vec3(0.4, 1.0, 0.9) + beat;
-            } else { // Forest
+            } else {
                  colBG = mix(vec3(0.0, 0.2, 0.05), vec3(0.1, 0.4, 0.1), sin(t*0.6 + beat*0.3)*0.5+0.5);
                  colStruct = vec3(0.2, 0.9, 0.3) * (1.0 + beat*0.5);
                  colPart = vec3(0.7, 1.0, 0.2) + beat;
             }
         }
-
         float particle(vec2 uv, vec2 offset, float scale, float z_pos) {
             vec2 pos = uv - offset;
             float d = length(pos);
@@ -448,50 +540,37 @@
             float size_scale = 1.0 / (1.0 + abs(z_pos * 0.8 / dynamicSize));
             return 0.06 / (d + 0.005) * smoothstep(scale * size_scale, 0.0, d);
         }
-
         void main() {
             vec2 uv = vTexCoord;
             uv.x *= u_res.x / u_res.y;
             vec2 centered = uv - 0.5;
-            
-            // --- GLOBAL ROTATION ---
             centered *= rot2d(u_rot * 0.05 + u_drift * 0.1); 
             vec2 mainUV = centered + 0.5;
-
-            // --- PATTERN GEN ---
             float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
             vec2 q = vec2(fbm(mainUV + u_time * 0.5 + u_drift, 2), fbm(mainUV + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
             vec2 r = vec2(fbm(mainUV + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
                           fbm(mainUV + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));                       
             float liquid = fbm(mainUV + r * warpStrength, 3);
-
             float ripple = fbm(mainUV * 4.0 + u_time + u_drift, 2);
             vec2 organicShift = vec2(ripple, ripple) * u_bass * u_react * 0.8; 
             float userGridScale = 2.0 + u_gridSize * 48.0; 
             vec2 gridUV = (mainUV + r * 0.05 + organicShift) * userGridScale;
             gridUV.x += sin(gridUV.y * 0.5 + u_time * 2.0) * u_vol * u_react * 0.8; 
-            
             float lineNoise = fbm(gridUV * 0.1 + u_time * 0.2, 2);
             float thickness = (0.01 + lineNoise * 0.1) * u_lineWeight + (u_bass * u_react * 0.04 * u_lineWeight); 
-            
             float distToLineX = abs(fract(gridUV.x + u_time*0.5) - 0.5);
             float distToLineY = abs(fract(gridUV.y - u_time*0.5) - 0.5);
             float gridX = smoothstep(thickness, thickness - 0.01, distToLineX);
             float gridY = smoothstep(thickness, thickness - 0.01, distToLineY);
-            
             float alphaNoise = fbm(gridUV * 0.3 - u_time * 0.1 + u_drift, 2);
             float gridAlpha = smoothstep(0.3 - (u_vol*0.3), 0.7, alphaNoise); 
             float weightFade = smoothstep(0.0, 0.05, u_lineWeight);
-
             float rawGrid = max(gridX, gridY);
-            float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y, 1.5) * (1.0 + u_bass * 0.8);
+            float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y * 3.0, 2.0) * (1.0 + u_bass * 0.8);
             structureIntensity += structureIntensity * lineNoise * 0.5; 
-
-            // --- PALETTE ---
             vec3 themeBG, themeStruct, themePart;
             float themeTime = liquid * 0.5 + u_time * 0.05;
             float themeBeat = u_bass * u_react;
-
             if (u_useAutoPalette > 0.5) {
                 int modeA = int(mod(u_paletteTime, 5.0));
                 int modeB = int(mod(u_paletteTime + 1.0, 5.0));
@@ -505,49 +584,34 @@
             } else {
                 getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
             }
-
-            // --- BORDER FX: WAVING & GLITCH ---
-            vec2 borderUV = centered; // Center (0,0)
-            
-            // 1. WAVING DISTORTION
-            // Create random waving based on time and audio
+            vec2 borderUV = centered;
             if (u_react > 0.1) {
+                float distAmt = u_borderParams.w * 0.5; 
                 float waveFreq = 10.0;
-                float waveAmp = u_bass * u_react * 0.15; // Amount of wave
-                float randomOffset = fbm(borderUV * 2.0 + u_time, 2); // Random noise
+                float waveAmp = u_bass * u_react * distAmt; 
+                float randomOffset = fbm(borderUV * 2.0 + u_time, 2); 
                 float waveX = sin(borderUV.y * waveFreq + u_time * 5.0 + randomOffset * 5.0) * waveAmp;
                 float waveY = cos(borderUV.x * waveFreq + u_time * 4.0 - randomOffset * 5.0) * waveAmp;
                 borderUV += vec2(waveX, waveY);
             }
-            
             vec2 absUV = abs(borderUV);
             float dX = (u_res.x/u_res.y)*0.5 - absUV.x;
             float dY = 0.5 - absUV.y;
             float edgeDist = min(dX, dY);
-            
-            // 2. TRANSPARENCY NOISE (Glitch)
-            // Use angle and distance to create a noise mask
             float angle = atan(borderUV.y, borderUV.x);
             float noiseMask = fbm(vec2(angle * 6.0, edgeDist * 20.0 - u_time * 2.0), 2);
-            // Threshold to create "holes" in the border
             float opacityMod = smoothstep(0.3, 0.6, noiseMask); 
-            
             float borderZone = smoothstep(u_borderParams.x + 0.01, u_borderParams.x, edgeDist); 
             float move = u_time * 3.0 + u_bass * u_react * 2.0;
             float pattern = sin(edgeDist * (50.0 + u_borderParams.y * 100.0) + move);
             float borderLines = smoothstep(0.8, 0.9, pattern);
-            
-            // Combine: Lines * Zone * Alpha * OpacityNoise
             float borderIntensity = borderLines * borderZone * u_borderParams.z * (1.0 + u_treble * u_react);
-            borderIntensity *= opacityMod; // APPLY NOISE MASK
-
-            // --- PARTICLES ---
+            borderIntensity *= opacityMod; 
             float particleIntensity = 0.0;
             float particleGridScale = 6.0 + u_params.z * 10.0;
             vec2 pUV = mainUV * particleGridScale;
             vec2 id = floor(pUV);
             pUV = fract(pUV) - 0.5;
-
             for(int y=-1; y<=1; y++) {
                 for(int x=-1; x<=1; x++) {
                     vec2 neighbor = vec2(float(x), float(y));
@@ -568,26 +632,19 @@
                 }
             }
             particleIntensity *= min(u_params.z * 2.0, 1.2); 
-
-            // --- COMPOSITING ---
             vec3 borderCol = themePart * borderIntensity; 
-            
             vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) 
                            + (themeStruct * structureIntensity) 
                            + (themePart * particleIntensity)
                            + borderCol;
-
             float luminance = dot(fullColor, vec3(0.299, 0.587, 0.114));
             vec3 monoColor = vec3(luminance) * 1.2; 
             monoColor = pow(monoColor, vec3(1.4));
-
             float volCurve = pow(u_vol * u_react, 1.5) * 3.0; 
             float dynamicSat = u_saturation + (u_saturation * volCurve * 0.3); 
             dynamicSat = clamp(dynamicSat, 0.0, 1.0);
-
             vec3 finalColor = mix(monoColor, fullColor, dynamicSat);
             finalColor += vec3(pow(u_bass * u_react, 2.0) * 0.15 * dynamicSat); 
-
             finalColor = finalColor / (finalColor + vec3(1.0)); 
             finalColor = pow(finalColor, vec3(0.8)); 
             gl_FragColor = vec4(finalColor, 1.0);
@@ -595,6 +652,19 @@
     `;
 
     function reloadPage() { location.reload(); }
+
+    function updateSliderUI(id, val) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = val;
+            // Handle X/Y text manually
+            if(id === 'imgXParam') document.getElementById('val-img-x').innerText = val.toFixed(2);
+            else if(id === 'imgYParam') document.getElementById('val-img-y').innerText = val.toFixed(2);
+            else if(id === 'ytXParam') document.getElementById('val-yt-x').innerText = val.toFixed(2);
+            else if(id === 'ytYParam') document.getElementById('val-yt-y').innerText = val.toFixed(2);
+            else el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
+        }
+    }
 
     function keyPressed() {
         let changed = false;
@@ -606,19 +676,17 @@
             state.global.react = constrain(state.global.react + 0.1, 0, 3); changed = true;
         } else if (keyCode === DOWN_ARROW) {
             state.global.react = constrain(state.global.react - 0.1, 0, 3); changed = true;
+        } else if (key === ' ') {
+            togglePlay();
+            return false; 
+        } else if (keyCode === ENTER) {
+            toggleUI();
         }
+
         if (changed) {
             updateSliderUI('saturationSlider', state.global.saturation);
             updateSliderUI('reactivity', state.global.react);
             return false;
-        }
-    }
-
-    function updateSliderUI(id, val) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.value = val;
-            el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
         }
     }
 
@@ -627,6 +695,84 @@
         const btn = document.getElementById('img-toggle-btn');
         if(state.global.imgVisible) btn.classList.add('active');
         else btn.classList.remove('active');
+    }
+
+    window.toggleYTInteract = () => {
+        state.global.ytInteractive = !state.global.ytInteractive;
+        const wrapper = document.getElementById('yt-wrapper');
+        const btn = document.getElementById('yt-interact-btn');
+        if(state.global.ytInteractive) {
+            wrapper.classList.add('interactive');
+            btn.classList.add('active');
+        } else {
+            wrapper.classList.remove('interactive');
+            btn.classList.remove('active');
+        }
+    }
+
+    window.loadYouTube = () => {
+        if(!ytReady) return alert("YouTube API not ready yet. Please wait a moment.");
+        let inputUrl = document.getElementById('yt-url').value;
+        let vidId = "";
+        let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        let match = inputUrl.match(regExp);
+        if (match && match[2].length == 11) vidId = match[2];
+        else vidId = inputUrl; 
+
+        if(vidId.length !== 11) return alert("Invalid YouTube URL/ID");
+
+        if(ytPlayer) {
+            ytPlayer.loadVideoById(vidId);
+            ytPlayer.mute(); 
+            ytPlayer.playVideo();
+        } else {
+            ytPlayer = new YT.Player('yt-player', {
+                height: '100%', width: '100%',
+                videoId: vidId,
+                playerVars: { 
+                    'autoplay': 1, 'controls': 0, 'mute': 1, 'loop': 1, 'playlist': vidId,
+                    'origin': window.location.origin
+                },
+                events: {
+                    'onReady': (event) => { 
+                        event.target.mute(); 
+                        event.target.playVideo(); 
+                    }
+                }
+            });
+        }
+        updateYTStyles();
+
+        // Sync
+        if(soundFile && soundFile.isLoaded()) {
+            soundFile.jump(0);
+            if(!soundFile.isPlaying()) soundFile.play();
+            document.getElementById('play-btn').innerText = "❚❚";
+        }
+    }
+
+    window.clearYouTube = () => {
+        if(ytPlayer) {
+            ytPlayer.stopVideo();
+            document.getElementById('yt-player').innerHTML = "";
+            ytPlayer = null;
+        }
+    }
+
+    function updateYTStyles() {
+        let wrapper = document.getElementById('yt-wrapper');
+        if(wrapper) {
+            let scale = state.global.ytSize;
+            let dim = Math.min(window.innerWidth, window.innerHeight) * scale * 2.0; 
+            wrapper.style.width = dim + "px";
+            wrapper.style.height = (dim * 0.5625) + "px";
+            wrapper.style.opacity = state.global.ytOpacity;
+            wrapper.style.mixBlendMode = state.global.ytBlend;
+            
+            let moveX = state.global.ytX * (window.innerWidth / 2);
+            let moveY = state.global.ytY * (window.innerHeight / 2);
+            wrapper.style.transform = `translate(calc(-50% + ${moveX}px), calc(-50% + ${moveY}px))`;
+        }
     }
 
     function setup() {
@@ -652,9 +798,12 @@
         });
 
         const controls = [
-            'param1', 'saturationSlider', 'param3', 'gridSize', 'gridLine', 'param2', 
-            'imgSizeParam', 'imgOpacityParam', 'imgXParam', 'imgYParam', 'reactivity',
-            'borderWidth', 'borderDensity', 'borderAlpha'
+            'param1', 'saturationSlider', 'reactivity', 
+            'gridSize', 'gridLine', 'param2', 'param3',
+            'borderWidth', 'borderDensity', 'borderDistortion', 'borderAlpha',
+            'ytSize', 'ytOpacity',
+            'imgSizeParam', 'imgOpacityParam', 'imgXParam', 'imgYParam',
+            'ytXParam', 'ytYParam'
         ];
 
         controls.forEach((id) => {
@@ -662,61 +811,65 @@
             if(el) {
                 el.addEventListener('input', (e) => {
                     let val = parseFloat(e.target.value);
+                    // --- MAPPING ---
                     if(id === 'param1') state.params[0] = val; 
                     else if(id === 'saturationSlider') state.global.saturation = val; 
-                    else if(id === 'param3') state.params[2] = val; 
+                    else if(id === 'reactivity') state.global.react = val;
                     else if(id === 'gridSize') state.global.gridSize = val; 
                     else if(id === 'gridLine') state.global.lineWeight = val; 
                     else if(id === 'param2') state.params[1] = val; 
+                    else if(id === 'param3') state.params[2] = val; 
+                    else if(id === 'borderWidth') state.global.borderWidth = val;
+                    else if(id === 'borderDensity') state.global.borderDensity = val;
+                    else if(id === 'borderDistortion') state.global.borderDistortion = val;
+                    else if(id === 'borderAlpha') state.global.borderAlpha = val;
+                    else if(id === 'ytSize') { state.global.ytSize = val; updateYTStyles(); }
+                    else if(id === 'ytOpacity') { state.global.ytOpacity = val; updateYTStyles(); }
+                    else if(id === 'ytXParam') { state.global.ytX = val; updateYTStyles(); }
+                    else if(id === 'ytYParam') { state.global.ytY = val; updateYTStyles(); }
                     else if(id === 'imgSizeParam') state.global.imgSize = val; 
                     else if(id === 'imgOpacityParam') state.global.imgOpacity = val; 
                     else if(id === 'imgXParam') state.global.imgX = val; 
                     else if(id === 'imgYParam') state.global.imgY = val; 
-                    else if(id === 'reactivity') state.global.react = val;
-                    else if(id === 'borderWidth') state.global.borderWidth = val;
-                    else if(id === 'borderDensity') state.global.borderDensity = val;
-                    else if(id === 'borderAlpha') state.global.borderAlpha = val;
 
-                    e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
+                    updateSliderUI(id, val);
                 });
             }
         });
+
+        document.getElementById('ytBlend').addEventListener('change', (e) => {
+            state.global.ytBlend = e.target.value;
+            updateYTStyles();
+        });
         
-        // --- SEEK SLIDER EVENTS ---
         const seekSlider = document.getElementById('seek-slider');
         seekSlider.addEventListener('mousedown', () => { isScrubbing = true; });
         seekSlider.addEventListener('touchstart', () => { isScrubbing = true; }, {passive: true});
-        
         seekSlider.addEventListener('input', (e) => {
             if(soundFile && soundFile.isLoaded()) {
                 let duration = soundFile.duration();
                 let seekTo = (parseFloat(e.target.value) / 100) * duration;
-                if(soundFile.isPlaying()) {
-                    soundFile.jump(seekTo);
-                } else {
-                    // Just move playhead if paused, but jumping while paused can be tricky in p5
-                    // Usually safer to jump only when playing or jump then play?
-                    // Let's just update current time var for display
-                }
                 document.getElementById('current-time').innerText = formatTime(seekTo);
             }
         });
-
         seekSlider.addEventListener('change', (e) => {
-            // Final commitment on release
             if(soundFile && soundFile.isLoaded()) {
                 let duration = soundFile.duration();
                 let seekTo = (parseFloat(e.target.value) / 100) * duration;
                 soundFile.jump(seekTo);
+                if (!soundFile.isPlaying()) {
+                    soundFile.play();
+                    document.getElementById('play-btn').innerText = "❚❚";
+                }
             }
             isScrubbing = false;
         });
-
         seekSlider.addEventListener('mouseup', () => { isScrubbing = false; });
         seekSlider.addEventListener('touchend', () => { isScrubbing = false; });
 
         document.getElementById('paletteSelect').value = state.global.colorMode;
         updateSliderUI('saturationSlider', state.global.saturation);
+        updateYTStyles();
     }
 
     function initApp() {
@@ -728,10 +881,19 @@
         setTimeout(()=> ov.style.display='none', 500);
     }
 
-    function switchToMic() {
+    function cleanupSound() {
         if (soundFile) {
-            if(soundFile.isPlaying()) soundFile.stop();
+            try {
+                if (soundFile.isPlaying()) soundFile.stop();
+                soundFile.disconnect();
+                soundFile.dispose();
+            } catch(e) { console.log("Cleanup error", e); }
+            soundFile = null;
         }
+    }
+
+    function switchToMic() {
+        cleanupSound(); 
         mic.start();
         fft.setInput(mic);
         amplitude.setInput(mic);
@@ -747,35 +909,31 @@
         const statusEl = document.getElementById('file-status');
         if (file.size > MAX_FILE_SIZE) { alert("ファイルが大きすぎます"); return; }
 
-        // --- FIX: STOP OLD FILE BEFORE LOADING NEW ONE ---
-        if (soundFile) {
-            soundFile.stop();
-            soundFile.dispose(); 
-        }
+        cleanupSound(); 
 
         statusEl.innerText = "LOADING...";
         const blobUrl = URL.createObjectURL(file);
         
         soundFile = loadSound(blobUrl, () => {
-            statusEl.innerText = "FILE PLAYING";
+            statusEl.innerText = "FILE READY"; 
             document.getElementById('play-btn').style.display = "flex";
+            document.getElementById('play-btn').innerText = "▶"; 
             document.getElementById('progress-container').style.display = "flex";
             
             mic.stop();
-            soundFile.play();
-            // Loop is tricky with jump(), standard play is better for tracks. 
-            // If loop is needed, handle 'ended' event manually if jump causes issues? 
-            // For now, let's keep loop but user be aware jumping works.
             soundFile.setLoop(true); 
             
             fft.setInput(soundFile);
             amplitude.setInput(soundFile);
             if(!state.syncMode) toggleSync();
             
-            // Set Total Time
             let dur = soundFile.duration();
             document.getElementById('total-time').innerText = formatTime(dur);
             document.getElementById('seek-slider').value = 0;
+
+            if(ytPlayer && typeof ytPlayer.pauseVideo === 'function') {
+                ytPlayer.pauseVideo();
+            }
 
             URL.revokeObjectURL(blobUrl);
         }, (err) => {
@@ -809,13 +967,27 @@
     }
 
     function togglePlay() {
+        let isPlaying = false;
         if(soundFile && soundFile.isLoaded()) {
             if(soundFile.isPlaying()) {
                 soundFile.pause();
+                isPlaying = false;
                 document.getElementById('play-btn').innerText = "▶";
             } else {
                 soundFile.play();
+                isPlaying = true;
                 document.getElementById('play-btn').innerText = "❚❚";
+            }
+        }
+
+        if(ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+            if(soundFile && soundFile.isLoaded()) {
+                if(isPlaying) ytPlayer.playVideo();
+                else ytPlayer.pauseVideo();
+            } else {
+                let state = ytPlayer.getPlayerState();
+                if (state === 1) ytPlayer.pauseVideo();
+                else ytPlayer.playVideo();
             }
         }
     }
@@ -825,7 +997,6 @@
     function draw() {
         if (!state.running && millis() < 1000) return;
 
-        // --- AUDIO PROGRESS UPDATE ---
         if (soundFile && soundFile.isPlaying() && !isScrubbing) {
             let currentTime = soundFile.currentTime();
             let duration = soundFile.duration();
@@ -843,12 +1014,15 @@
         let vol = amplitude.getLevel();
 
         if (!state.uiHidden) {
-            vizCtx.clearRect(0, 0, 230, 40);
+            // Update viz to match new larger width
+            const w = vizCtx.canvas.width;
+            const h = vizCtx.canvas.height;
+            vizCtx.clearRect(0, 0, w, h);
             vizCtx.fillStyle = state.syncMode ? 'rgba(0, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.2)';
-            let barW = 230 / spectrum.length;
+            let barW = w / spectrum.length;
             for (let i = 0; i < spectrum.length; i++) {
-                let h = (spectrum[i] / 255) * 38 * (0.5 + vol * 1.5); 
-                vizCtx.fillRect(i * barW, 40 - h, barW - 1, h);
+                let barH = (spectrum[i] / 255) * (h - 2) * (0.5 + vol * 1.5); 
+                vizCtx.fillRect(i * barW, h - barH, barW - 1, barH);
             }
         }
 
@@ -858,7 +1032,6 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
-        // --- EXTREME CONTRAST FLOW LOGIC ---
         let speedVal = state.params[0]; 
         let increment = 0;
 
@@ -866,7 +1039,6 @@
             let minDrift = speedVal * 0.0002; 
             let dynamicJump = speedVal * 0.15 * pow(state.avgBass, 4.0) * state.global.react;
             increment = minDrift + dynamicJump;
-            
             state.drift += 0.002 + (state.avgBass * 0.01); 
             state.paletteTime += 0.005 + (state.avgBass * 0.05);
         } else {
@@ -882,7 +1054,8 @@
         let targetBorder = { 
             width: state.global.borderWidth, 
             density: state.global.borderDensity, 
-            alpha: state.global.borderAlpha 
+            alpha: state.global.borderAlpha,
+            distortion: state.global.borderDistortion 
         };
 
         if (state.syncMode) {
@@ -894,6 +1067,7 @@
             if (state.global.borderWidth > 0.01) {
                 targetBorder.width = state.global.borderWidth + (state.avgBass * 0.1 * state.global.react);
                 targetBorder.alpha = Math.min(1.0, state.global.borderAlpha + (state.avgTreble * 0.2));
+                targetBorder.distortion = state.global.borderDistortion + (state.avgBass * state.global.react);
             }
         } else {
             targetP = [...state.params];
@@ -908,8 +1082,8 @@
         state.dynamicBorder.width = lerp(state.dynamicBorder.width, targetBorder.width, 0.1);
         state.dynamicBorder.density = lerp(state.dynamicBorder.density, targetBorder.density, 0.1);
         state.dynamicBorder.alpha = lerp(state.dynamicBorder.alpha, targetBorder.alpha, 0.1);
+        state.dynamicBorder.distortion = lerp(state.dynamicBorder.distortion, targetBorder.distortion, 0.1);
 
-        // 1. Draw Background
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
         myShader.setUniform('u_time', state.customTime);
@@ -918,10 +1092,8 @@
         myShader.setUniform('u_react', state.global.react); 
         myShader.setUniform('u_saturation', state.global.saturation); 
         myShader.setUniform('u_colorMode', state.global.colorMode); 
-        
         myShader.setUniform('u_useAutoPalette', state.syncMode ? 1.0 : 0.0);
         myShader.setUniform('u_paletteTime', state.paletteTime);
-
         myShader.setUniform('u_gridSize', state.global.gridSize); 
         myShader.setUniform('u_lineWeight', state.global.lineWeight); 
         myShader.setUniform('u_rot', rotAccumulator);
@@ -929,12 +1101,16 @@
         myShader.setUniform('u_mid', state.avgMid);
         myShader.setUniform('u_treble', state.avgTreble);
         myShader.setUniform('u_vol', state.avgVol);
-
-        myShader.setUniform('u_borderParams', [state.dynamicBorder.width, state.dynamicBorder.density, state.dynamicBorder.alpha]);
+        
+        myShader.setUniform('u_borderParams', [
+            state.dynamicBorder.width, 
+            state.dynamicBorder.density, 
+            state.dynamicBorder.alpha, 
+            state.dynamicBorder.distortion
+        ]);
 
         rect(-width/2, -height/2, width, height);
 
-        // 2. Draw Image Plane
         if (centerImg && state.global.imgVisible) {
             if (centerImg.width > 0) {
                 resetShader(); 
@@ -944,7 +1120,6 @@
                 
                 let offX = state.global.imgX * (width / 2); 
                 let offY = state.global.imgY * (height / 2); 
-                
                 translate(offX, offY, 100); 
                 noLights(); 
                 
@@ -961,7 +1136,6 @@
                 }
 
                 tint(255, state.global.imgOpacity * 255);
-
                 texture(centerImg);
                 noStroke();
                 plane(displayW, displayH);
