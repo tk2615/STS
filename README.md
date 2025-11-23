@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ: Sensitive Color v4 (Key Ctrl)</title>
+    <title>Aether VJ v5.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -121,6 +121,7 @@
             display: none; font-weight: bold; font-size: 16px;
         }
         .mic-mode-btn { background: #004400; border-color: #00ff00; color: #00ff00; }
+        .img-mode-btn { background: #000044; border-color: #4444ff; color: #aaaaff; }
 
         #overlay {
             position: fixed; inset: 0; background: #000; z-index: 9999;
@@ -128,10 +129,9 @@
             cursor: pointer; color: #fff; transition: opacity 0.5s ease-out;
             pointer-events: auto;
         }
-        .start-text { font-size: 14px; letter-spacing: 8px; font-weight: 300; margin-bottom: 20px; opacity: 0.9; text-align: center; pointer-events: none; }
-        .sub-text { font-size: 10px; color: #0ff; letter-spacing: 2px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 10px 20px; border-radius: 30px; border: 1px solid rgba(0,255,255,0.3); pointer-events: none; }
+        .start-text { font-size: 16px; letter-spacing: 8px; font-weight: 700; margin-bottom: 20px; opacity: 1.0; text-align: center; pointer-events: none; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.8); }
+        .sub-text { font-size: 12px; color: #0ff; letter-spacing: 3px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 12px 30px; border-radius: 30px; border: 1px solid rgba(0,255,255,0.5); pointer-events: none; font-weight: bold; box-shadow: 0 0 20px rgba(0,255,255,0.2); }
 
-        /* Keyboard Tip */
         .key-tip {
             position: absolute; bottom: 80px; width: 100%; text-align: center; 
             font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 1px; pointer-events: none;
@@ -147,8 +147,8 @@
 <body>
 
 <div id="overlay" onclick="initApp()">
-    <div class="start-text">TAP TO START</div>
-    <div class="sub-text">SENSITIVE COLOR V4</div>
+    <div class="start-text">AETHER VJ</div>
+    <div class="sub-text">START</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -205,6 +205,11 @@
             <div class="label-row"><label>Grid (Distortion)</label> <span class="value" id="val-2">0.3</span></div>
             <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
         </div>
+
+        <div class="slider-group" id="grp-img-size">
+            <div class="label-row"><label>Image Scale</label> <span class="value" id="val-img-size">0.5</span></div>
+            <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
+        </div>
         
         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
 
@@ -218,9 +223,15 @@
 <div class="bottom-bar" id="btm-bar">
     <div class="file-controls">
         <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC</button>
+        
+        <label for="img-upload" class="custom-file-btn img-mode-btn">🖼️ IMG</label>
+        <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
+
         <div id="file-status">MIC MODE</div>
+        
         <label for="audio-upload" class="custom-file-btn">📂 FILE</label>
         <input type="file" id="audio-upload" accept=".mp3,audio/*" style="display:none" onchange="handleFileSelect(this)">
+        
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">❚❚</button>
     </div>
 </div>
@@ -236,14 +247,15 @@
         syncMode: false,
         params: [0.5, 0.3, 0.4], 
         dynamicParams: [0.5, 0.3, 0.4],
-        global: { react: 1.5, gridSize: 0.5, lineWeight: 0.3, paletteVal: 0.1, rot: 0.0 },
+        global: { react: 1.5, gridSize: 0.5, lineWeight: 0.3, paletteVal: 0.1, rot: 0.0, imgSize: 0.5 },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0,
         drift: 0 
     };
 
     let myShader, fft, amplitude, mic;
-    let soundFile = null; 
+    let soundFile = null;
+    let centerImg = null; 
     let vizCtx; 
 
     const vert = `
@@ -309,14 +321,12 @@
             centered *= rot2d(u_rot * 0.05 + u_drift * 0.1); 
             uv = centered + 0.5;
 
-            // Fluid
             float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
             vec2 q = vec2(fbm(uv + u_time * 0.5 + u_drift, 2), fbm(uv + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
             vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
                           fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));          
             float liquid = fbm(uv + r * warpStrength, 3);
 
-            // Water Grid
             float ripple = fbm(uv * 4.0 + u_time + u_drift, 2);
             vec2 organicShift = vec2(ripple, ripple) * u_bass * u_react * 0.8; 
             float userGridScale = 2.0 + u_gridSize * 48.0; 
@@ -339,7 +349,6 @@
             float structure = rawGrid * gridAlpha * weightFade * min(u_params.y, 1.5) * (1.0 + u_bass * 0.8);
             structure += structure * lineNoise * 0.5; 
 
-            // Particles
             float particles = 0.0;
             vec3 particleColorAccum = vec3(0.0);
             float particleGridScale = 6.0 + u_params.z * 10.0;
@@ -370,7 +379,6 @@
             }
             particles *= min(u_params.z * 2.0, 1.2); 
 
-            // Color
             vec3 bgRainbow = getRainbow(liquid * 0.5 + u_time * 0.05, u_drift * 0.1);
             vec3 fullColor = (bgRainbow * (0.2 + liquid * 0.3)) + (vec3(0.2, 0.9, 1.0) * structure) + particleColorAccum;
             float luminance = dot(fullColor, vec3(0.299, 0.587, 0.114));
@@ -395,28 +403,19 @@
     // --- KEYBOARD CONTROLS ---
     function keyPressed() {
         let changed = false;
-        // Arrow Left/Right: Color/Mono
         if (keyCode === RIGHT_ARROW) {
-            state.global.paletteVal = constrain(state.global.paletteVal + 0.05, 0, 1);
-            changed = true;
+            state.global.paletteVal = constrain(state.global.paletteVal + 0.05, 0, 1); changed = true;
         } else if (keyCode === LEFT_ARROW) {
-            state.global.paletteVal = constrain(state.global.paletteVal - 0.05, 0, 1);
-            changed = true;
-        } 
-        // Arrow Up/Down: Reactivity
-        else if (keyCode === UP_ARROW) {
-            state.global.react = constrain(state.global.react + 0.1, 0, 3);
-            changed = true;
+            state.global.paletteVal = constrain(state.global.paletteVal - 0.05, 0, 1); changed = true;
+        } else if (keyCode === UP_ARROW) {
+            state.global.react = constrain(state.global.react + 0.1, 0, 3); changed = true;
         } else if (keyCode === DOWN_ARROW) {
-            state.global.react = constrain(state.global.react - 0.1, 0, 3);
-            changed = true;
+            state.global.react = constrain(state.global.react - 0.1, 0, 3); changed = true;
         }
-
         if (changed) {
-            // Update UI elements if they exist
             updateSliderUI('colorshift', state.global.paletteVal);
             updateSliderUI('reactivity', state.global.react);
-            return false; // Prevent default browser scrolling
+            return false;
         }
     }
 
@@ -447,7 +446,8 @@
         const vC = document.getElementById('viz-canvas');
         vizCtx = vC.getContext('2d');
 
-        ['param1', 'colorshift', 'param3', 'gridSize', 'gridLine', 'param2', 'reactivity'].forEach((id) => {
+        // ID Mappings for sliders
+        ['param1', 'colorshift', 'param3', 'gridSize', 'gridLine', 'param2', 'imgSizeParam', 'reactivity'].forEach((id) => {
             const el = document.getElementById(id);
             if(el) {
                 el.addEventListener('input', (e) => {
@@ -458,6 +458,7 @@
                     else if(id === 'gridSize') state.global.gridSize = val; 
                     else if(id === 'gridLine') state.global.lineWeight = val; 
                     else if(id === 'param2') state.params[1] = val; 
+                    else if(id === 'imgSizeParam') state.global.imgSize = val; 
                     else if(id === 'reactivity') state.global.react = val; 
                     e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
                 });
@@ -490,14 +491,9 @@
         if (fileInput.files.length === 0) return;
         const file = fileInput.files[0];
         const statusEl = document.getElementById('file-status');
-        
-        if (file.size > MAX_FILE_SIZE) {
-            alert("ファイルが大きすぎます (20MB制限)");
-            return;
-        }
+        if (file.size > MAX_FILE_SIZE) { alert("ファイルが大きすぎます"); return; }
 
         statusEl.innerText = "LOADING...";
-        
         const blobUrl = URL.createObjectURL(file);
         soundFile = loadSound(blobUrl, () => {
             statusEl.innerText = "FILE PLAYING";
@@ -512,6 +508,16 @@
         }, (err) => {
             console.error(err);
             statusEl.innerText = "ERROR";
+        });
+    }
+
+    function handleImageSelect(fileInput) {
+        if (fileInput.files.length === 0) return;
+        const file = fileInput.files[0];
+        const blobUrl = URL.createObjectURL(file);
+        centerImg = loadImage(blobUrl, () => {
+            console.log("Image loaded");
+            URL.revokeObjectURL(blobUrl);
         });
     }
 
@@ -560,7 +566,6 @@
         state.drift += 0.002; 
 
         let targetP = [0, 0, 0];
-        
         if (state.syncMode) {
             targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
             targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
@@ -576,6 +581,7 @@
             state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
         }
         
+        // 1. Draw Shader Background
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
         myShader.setUniform('u_time', state.customTime);
@@ -590,8 +596,26 @@
         myShader.setUniform('u_mid', state.avgMid);
         myShader.setUniform('u_treble', state.avgTreble);
         myShader.setUniform('u_vol', state.avgVol);
-        
         rect(-width/2, -height/2, width, height);
+
+        // 2. Draw Center Image (if loaded)
+        if (centerImg) {
+            resetShader(); 
+            let aspect = centerImg.width / centerImg.height;
+            let baseScale = min(width, height) * 0.8; 
+            let displayW, displayH;
+
+            if (aspect > 1) {
+                displayW = baseScale * state.global.imgSize;
+                displayH = displayW / aspect;
+            } else {
+                displayH = baseScale * state.global.imgSize;
+                displayW = displayH * aspect;
+            }
+
+            imageMode(CENTER);
+            image(centerImg, 0, 0, displayW, displayH);
+        }
     }
 
     window.toggleUI = () => {
