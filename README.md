@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ: Free Flow Particles (Anti-Whiteout)</title>
+    <title>Aether VJ: Seamless Flow</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -161,7 +161,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">TAP TO START</div>
-    <div class="sub-text">VISUALIZER CORE</div>
+    <div class="sub-text">SEAMLESS FLOW</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -234,7 +234,7 @@
 
 <script>
     // --- Configuration ---
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB Limit for mobile stability
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB Limit
 
     // --- State Management ---
     let state = {
@@ -242,7 +242,9 @@
         syncMode: false,
         params: [0.5, 0.3, 0.4], 
         dynamicParams: [0.5, 0.3, 0.4],
-        global: { react: 1.5, paletteVal: 0.2, dynPalette: 0.2, rot: 0.0 }
+        global: { react: 1.5, paletteVal: 0.2, dynPalette: 0.2, rot: 0.0 },
+        // Smooth Audio Variables
+        avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0
     };
 
     let myShader, fft, amplitude, mic;
@@ -254,13 +256,14 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- OPTIMIZED SHADER WITH WHITE-OUT FIX ---
+    // --- SMOOTH & SEAMLESS SHADER ---
     const frag = `
         precision highp float; 
         varying vec2 vTexCoord;
         uniform float u_time; uniform vec2 u_res;
         uniform vec3 u_params; 
         uniform float u_react; uniform float u_paletteVal; 
+        // These receive the SMOOTHED audio values now
         uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
         
         #define PI 3.14159265359
@@ -287,71 +290,72 @@
         }
 
         vec3 getPalette(float t, float pVal, float bass, float mid) {
-            // Reduced Saturation for deep, non-vivid color
             vec3 a = vec3(0.3, 0.3, 0.3);
             vec3 b = vec3(0.3, 0.3, 0.3); 
             vec3 c = vec3(1.0, 1.0, 1.0);
-            // Bias towards cool tones
             vec3 d = vec3(0.0, 0.33, 0.67) + (pVal * vec3(0.5, 0.1, 0.0)); 
             
-            vec3 col = a + b * cos( 6.28318 * (c * t + d) );
-            vec3 col2 = a + b * cos( 6.28318 * (c * t*1.5 + d + vec3(0.2, 0.0, -0.1)) );
-            return mix(col, col2, mid * 0.4);
+            // Slow down the color cycling significantly
+            vec3 col = a + b * cos( 6.28318 * (c * t * 0.5 + d) );
+            vec3 col2 = a + b * cos( 6.28318 * (c * t * 0.7 + d + vec3(0.2, 0.0, -0.1)) );
+            
+            // Mixing is more subtle
+            return mix(col, col2, mid * 0.3);
         }
 
         float particle(vec2 uv, vec2 offset, float scale, float n, float z_pos) {
             vec2 pos = uv - offset;
             float d = length(pos);
-            float flicker = hash(offset + u_time * 0.5) * 0.5 + 0.5; 
+            // Flicker is independent of audio to stay smooth
+            float flicker = hash(offset + u_time * 0.2) * 0.3 + 0.7; 
             
-            // Perspective scaling: farther away = smaller
             float size_scale = 1.0 / (1.0 + abs(z_pos * 0.5)); 
-            
             return 0.05 / (d + 0.001) * smoothstep(scale * size_scale, scale * size_scale * 0.1, d) * flicker; 
         }
 
         void main() {
             vec2 uv = vTexCoord;
             uv.x *= u_res.x / u_res.y;
+            
+            // Rotation is now very slow and continuous
             vec2 centered = uv - 0.5;
-            centered *= rot2d(u_rot * (0.05 + u_vol * 0.05)); 
+            centered *= rot2d(u_rot * 0.05); 
             uv = centered + 0.5;
 
             // Fluid
-            float speed = u_params.x * 0.3; 
-            float bassImpact = u_bass * u_react * 5.0;
-            float warpStrength = 1.0 + u_params.x * 1.0 + bassImpact; 
+            float speed = u_params.x * 0.2; 
+            // Dampen bass impact on fluid distortion to prevent jerking
+            float bassImpact = u_bass * u_react * 2.0; 
+            float warpStrength = 1.0 + u_params.x * 0.5 + bassImpact; 
             
             vec2 q = vec2(fbm(uv + u_time * speed, 4), fbm(uv + vec2(5.2, 1.3) + u_time * speed, 4));
-            vec2 r = vec2(fbm(uv + 4.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.5, 4), 
-                          fbm(uv + 4.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.5, 4));
+            vec2 r = vec2(fbm(uv + 4.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.2, 4), 
+                          fbm(uv + 4.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.2, 4));
                                   
             float liquid = fbm(uv + r * warpStrength, 6);
             liquid = pow(smoothstep(0.1, 0.9, liquid), 1.5);
 
-            // Grid (Enhanced 3D Pop)
+            // Grid
             float gridScale = 4.0 + u_params.y * 35.0; 
-            vec2 gridUV = (uv + r * (0.05 + bassImpact * 0.2)) * gridScale * (1.0 + liquid * 0.05 * u_params.y);
+            vec2 gridUV = (uv + r * 0.05) * gridScale * (1.0 + liquid * 0.05 * u_params.y);
             
-            float thick = 0.47 + (u_bass * 0.03 * u_react); 
-            float gridLine = smoothstep(thick, 0.5, abs(fract(gridUV.x + u_time*0.05) - 0.5));
-            gridLine += smoothstep(thick, 0.5, abs(fract(gridUV.y - u_time*0.03) - 0.5));
-            float structure = gridLine * min(u_params.y, 0.8) * (1.0 + bassImpact * 0.5); 
+            float thick = 0.48; 
+            float gridLine = smoothstep(thick, 0.5, abs(fract(gridUV.x + u_time*0.02) - 0.5));
+            gridLine += smoothstep(thick, 0.5, abs(fract(gridUV.y - u_time*0.01) - 0.5));
+            float structure = gridLine * min(u_params.y, 0.8) * (1.0 + bassImpact * 0.3); 
 
-            // Particles (Free Flowing & Stereoscopic)
+            // Particles
             float particles = 0.0;
             float particleGridScale = 8.0 + u_params.z * 15.0;
             vec2 pUV = uv * particleGridScale;
-            vec2 pID = floor(pUV);
             
-            // Add persistent screen-wide flow field offset
-            float global_flow_speed = 0.1 + u_vol * 0.2;
+            // Flow Field for Particles
+            float global_flow_speed = 0.05 + u_vol * 0.1;
             vec2 global_flow_offset = vec2(u_time * global_flow_speed, u_time * global_flow_speed * 0.5);
-            vec2 offset_pID = floor(pUV - global_flow_offset); // Base ID influenced by continuous flow
+            vec2 offset_pID = floor(pUV - global_flow_offset); 
 
             pUV = fract(pUV) - 0.5;
 
-            // Loop now uses the offset ID for consistent, non-tiling flow perception
             for(int y=-1; y<=1; y++) {
                 for(int x=-1; x<=1; x++) {
                     vec2 neighbor = vec2(float(x), float(y));
@@ -361,35 +365,34 @@
                     float z_offset = hash(id + vec2(100.0));
                     float z_pos = 2.0 * z_offset - 1.0; 
                     
-                    float moveSpeed = u_time * (0.5 + n) + u_treble * u_react * 1.5;
-                    float posX = sin(moveSpeed + n * 6.28) * (0.3 + u_treble * 0.2);
-                    float posY = cos(moveSpeed + n * 6.28) * (0.3 + u_treble * 0.2);
+                    // SMOOTH MOVEMENT:
+                    // Removed u_treble from position calculation to prevent teleporting
+                    float moveSpeed = u_time * (0.3 + n * 0.2); 
+                    float posX = sin(moveSpeed + n * 6.28) * 0.3;
+                    float posY = cos(moveSpeed + n * 6.28) * 0.3;
                     
                     float perspective_scale = 1.0 / (1.0 + z_pos * 0.5); 
-                    
-                    // Position is now relative to the flowing cell, and scaled by depth
                     vec2 pOffset = (neighbor + vec2(posX, posY) - fract(global_flow_offset) ) * perspective_scale; 
                     
-                    float pSize = (0.08 + u_params.z * 0.15) * (1.0 + u_treble * u_react * 2.0) * n;
+                    // Audio mainly affects SIZE and BRIGHTNESS, not position
+                    float pSize = (0.08 + u_params.z * 0.15) * (1.0 + u_treble * u_react * 2.5) * n;
                     particles += particle(pUV, pOffset, pSize, n, z_pos);
                 }
             }
-            // FIX: Reduced particle brightness multiplier to prevent blowout
             particles *= min(u_params.z * 1.5, 1.0); 
 
             // Mix
-            vec3 col = getPalette(liquid + u_bass * 0.2, u_paletteVal, u_bass, u_mid);
+            // Use smoothed audio for color mixing to prevent flashing
+            vec3 col = getPalette(liquid + u_bass * 0.1, u_paletteVal, u_bass, u_mid);
             
-            // FIX: Reduced structure brightness multiplier (1.5 -> 1.0)
-            vec3 structCol = vec3(0.0, 0.8, 1.0) * (0.5 + u_bass*0.5) * (1.0 + u_paletteVal); 
+            vec3 structCol = vec3(0.0, 0.8, 1.0) * (0.5 + u_bass*0.3) * (1.0 + u_paletteVal); 
             col = mix(col, structCol * 1.0, structure * 0.7); 
             
-            // FIX: Reduced particle additive mixing (2.0 -> 1.2)
             col += vec3(particles * 1.2) * structCol; 
 
             // Post Processing
             vec3 finalCol = col;
-            float aber = u_vol * u_react * 0.02;
+            float aber = u_vol * u_react * 0.015; // Subtle aberration
             finalCol.r = mix(col.r, col.r * 1.1, aber);
             
             float satFactor = smoothstep(0.0, 0.2, u_paletteVal);
@@ -400,11 +403,9 @@
 
             float vig = 1.0 - smoothstep(0.3, 1.8, length(vTexCoord - 0.5) * 1.5);
             finalCol *= vig;
-            finalCol += (hash(uv + u_time) - 0.5) * 0.05;
             
-            // FIX: Stronger Tone Mapping (0.6 -> 1.2) to compress highlights and prevent whiteout
+            // Tone Mapping
             finalCol = finalCol / (finalCol + vec3(1.2)); 
-            
             finalCol = pow(finalCol, vec3(1.0/1.8)); 
 
             gl_FragColor = vec4(finalCol, 1.0);
@@ -527,7 +528,7 @@
         let spectrum = fft.analyze();
         let bass = fft.getEnergy("bass") / 255.0;      
         let mid = fft.getEnergy("mid") / 255.0;
-        let treble = fft.getEnergy("treble") / 255.0 * 1.5; 
+        let treble = fft.getEnergy("treble") / 255.0; // Raw value
         let vol = amplitude.getLevel();
 
         if (!state.uiHidden) {
@@ -540,18 +541,27 @@
             }
         }
 
+        // --- AUDIO SMOOTHING (The Key to Seamlessness) ---
+        // Lerp factor 0.1 means "move 10% towards the target". 
+        // Smaller number = smoother/slower reaction.
+        let smoothFactor = 0.08; 
+        state.avgBass = lerp(state.avgBass, bass, smoothFactor);
+        state.avgMid = lerp(state.avgMid, mid, smoothFactor);
+        state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
+        state.avgVol = lerp(state.avgVol, vol, smoothFactor);
+
         let targetP = [0, 0, 0];
         let targetPal = state.global.paletteVal;
 
         if (state.syncMode) {
-            targetP[0] = state.params[0] + (vol * 4.0); 
-            targetP[1] = state.params[1] + (bass * 3.0 * state.global.react); 
-            targetP[2] = state.params[2] + (treble * 2.5 * state.global.react);
+            targetP[0] = state.params[0] + (state.avgVol * 2.0); 
+            targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
+            targetP[2] = state.params[2] + (state.avgTreble * 2.0 * state.global.react);
             
             if (state.global.paletteVal > 0.15) {
-                targetPal = state.global.paletteVal + (mid * 0.3 * state.global.react) + (bass * 0.1);
+                targetPal = state.global.paletteVal + (state.avgMid * 0.2 * state.global.react) + (state.avgBass * 0.05);
             }
-            rotAccumulator += (0.001 + vol * 0.12); 
+            rotAccumulator += (0.0005 + state.avgVol * 0.05); 
         } else {
             targetP = [...state.params];
             rotAccumulator += 0.0005;
@@ -561,7 +571,8 @@
             state.dynamicParams[i] = lerp(state.dynamicParams[i], targetP[i], 0.05);
             state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
         }
-        state.global.dynPalette = lerp(state.global.dynPalette, targetPal, 0.03);
+        // Palette lerp is even slower for drifting colors
+        state.global.dynPalette = lerp(state.global.dynPalette, targetPal, 0.02);
         
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
@@ -570,10 +581,12 @@
         myShader.setUniform('u_react', state.global.react); 
         myShader.setUniform('u_paletteVal', state.global.dynPalette);
         myShader.setUniform('u_rot', rotAccumulator);
-        myShader.setUniform('u_bass', bass); 
-        myShader.setUniform('u_mid', mid);
-        myShader.setUniform('u_treble', treble);
-        myShader.setUniform('u_vol', vol);
+        
+        // Pass the SMOOTHED values to the shader
+        myShader.setUniform('u_bass', state.avgBass); 
+        myShader.setUniform('u_mid', state.avgMid);
+        myShader.setUniform('u_treble', state.avgTreble);
+        myShader.setUniform('u_vol', state.avgVol);
         
         rect(-width/2, -height/2, width, height);
     }
