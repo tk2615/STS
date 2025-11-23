@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ: Individual Floating Particles</title>
+    <title>Aether VJ: Optimized Lite</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
@@ -161,7 +161,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">TAP TO START</div>
-    <div class="sub-text">INDIVIDUAL FLOATING MODE</div>
+    <div class="sub-text">PERFORMANCE MODE</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -255,9 +255,9 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- SHADER WITH INDIVIDUAL FLOATING PARTICLES ---
+    // --- OPTIMIZED SHADER (LITE VERSION) ---
     const frag = `
-        precision highp float; 
+        precision mediump float; // Changed to mediump for performance
         varying vec2 vTexCoord;
         uniform float u_time; uniform vec2 u_res;
         uniform vec3 u_params; 
@@ -276,11 +276,12 @@
             return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
         }
         
+        // REDUCED OCTAVES from 8 to 4
         float fbm(vec2 x, int oct) {
             float v = 0.0; float a = 0.5;
             vec2 shift = vec2(100.0);
             mat2 rot = rot2d(0.5);
-            for (int i = 0; i < 8; i++) {
+            for (int i = 0; i < 4; i++) { // Optimization: Reduced loop count
                 if(i >= oct) break;
                 v += a * noise(x); x = rot * x * 2.0 + shift; a *= 0.5;
             }
@@ -295,17 +296,18 @@
             
             vec3 col = a + b * cos( 6.28318 * (c * t * 0.5 + d) );
             vec3 col2 = a + b * cos( 6.28318 * (c * t * 0.7 + d + vec3(0.2, 0.0, -0.1)) );
-            
             return mix(col, col2, mid * 0.3);
         }
 
         float particle(vec2 uv, vec2 offset, float scale, float n, float z_pos) {
             vec2 pos = uv - offset;
             float d = length(pos);
-            float flicker = hash(offset + u_time * 0.2) * 0.3 + 0.7; 
+            // Simplified flicker calc
+            float flicker = hash(offset) * 0.3 + 0.7; 
             
             float size_scale = 1.0 / (1.0 + abs(z_pos * 0.5)); 
-            return 0.05 / (d + 0.001) * smoothstep(scale * size_scale, scale * size_scale * 0.1, d) * flicker; 
+            // Optimization: slightly simpler smoothstep
+            return 0.05 / (d + 0.01) * smoothstep(scale * size_scale, 0.0, d) * flicker; 
         }
 
         void main() {
@@ -316,16 +318,18 @@
             centered *= rot2d(u_rot * 0.05); 
             uv = centered + 0.5;
 
-            // Fluid
+            // Fluid - Optimization: Reduced FBM calls
             float speed = u_params.x * 0.2; 
             float bassImpact = u_bass * u_react * 2.0; 
             float warpStrength = 1.0 + u_params.x * 0.5 + bassImpact; 
             
-            vec2 q = vec2(fbm(uv + u_time * speed, 4), fbm(uv + vec2(5.2, 1.3) + u_time * speed, 4));
-            vec2 r = vec2(fbm(uv + 4.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.2, 4), 
-                          fbm(uv + 4.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.2, 4));
+            // Reduced to 2 octaves for warping coordinates
+            vec2 q = vec2(fbm(uv + u_time * speed, 2), fbm(uv + vec2(5.2, 1.3) + u_time * speed, 2));
+            vec2 r = vec2(fbm(uv + 2.0 * q + vec2(1.7, 9.2) + u_time * speed + u_mid*0.2, 2), 
+                          fbm(uv + 2.0 * q + vec2(8.3, 2.8) + u_time * speed - u_mid*0.2, 2));
                                   
-            float liquid = fbm(uv + r * warpStrength, 6);
+            // Main liquid texture with 3 octaves
+            float liquid = fbm(uv + r * warpStrength, 3);
             liquid = pow(smoothstep(0.1, 0.9, liquid), 1.5);
 
             // Grid
@@ -337,12 +341,11 @@
             gridLine += smoothstep(thick, 0.5, abs(fract(gridUV.y - u_time*0.01) - 0.5));
             float structure = gridLine * min(u_params.y, 0.8) * (1.0 + bassImpact * 0.3); 
 
-            // Particles (Individual Floating)
+            // Particles (Optimized)
             float particles = 0.0;
             float particleGridScale = 8.0 + u_params.z * 15.0;
             vec2 pUV = uv * particleGridScale;
             
-            // Global slow drift
             float global_flow_speed = 0.02 + u_vol * 0.05;
             vec2 global_flow_offset = vec2(u_time * global_flow_speed, u_time * global_flow_speed * 0.3);
             vec2 offset_pID = floor(pUV - global_flow_offset); 
@@ -356,21 +359,16 @@
                     float n = hash(id);
                     
                     float z_offset = hash(id + vec2(100.0));
-                    // Add slow Z-axis floating
                     float z_pos = (2.0 * z_offset - 1.0) + sin(u_time * 0.3 + n * 5.0) * 0.5; 
                     
-                    // --- KEY CHANGES FOR INDIVIDUAL FLOATING ---
-                    // Slower base speed
                     float t = u_time * (0.1 + n * 0.1); 
                     
-                    // Much larger movement range (amplitude from 0.3 to ~2.5)
-                    // Complex Lissajous-like movement using multiple sines/cosines with different frequencies
+                    // Optimization: Pre-calculate commonly used sine waves if possible, 
+                    // but here we just keep it simple.
                     float posX = sin(t + n * 6.28) * 2.5 + cos(t * 1.3 + n * 3.0) * 1.0;
                     float posY = cos(t * 1.1 + n * 6.28) * 2.5 + sin(t * 1.7 + n * 4.0) * 1.0;
                     
                     float perspective_scale = 1.0 / (1.0 + z_pos * 0.5); 
-                    
-                    // Apply large individual offset to the neighbor base position
                     vec2 pOffset = (neighbor + vec2(posX, posY) - fract(global_flow_offset) ) * perspective_scale; 
                     
                     float pSize = (0.08 + u_params.z * 0.15) * (1.0 + u_treble * u_react * 2.5) * n;
@@ -381,28 +379,26 @@
 
             // Mix
             vec3 col = getPalette(liquid + u_bass * 0.1, u_paletteVal, u_bass, u_mid);
-            
             vec3 structCol = vec3(0.0, 0.8, 1.0) * (0.5 + u_bass*0.3) * (1.0 + u_paletteVal); 
             col = mix(col, structCol * 1.0, structure * 0.7); 
-            
             col += vec3(particles * 1.2) * structCol; 
 
-            // Post Processing
+            // Post Processing (Simplified)
             vec3 finalCol = col;
             float aber = u_vol * u_react * 0.015; 
             finalCol.r = mix(col.r, col.r * 1.1, aber);
             
             float satFactor = smoothstep(0.0, 0.2, u_paletteVal);
-            float gray = dot(finalCol, vec3(0.299, 0.587, 0.114));
-            float noirContrast = 1.0 + (1.0 - satFactor) * 0.5; 
-            vec3 noirGray = vec3(pow(gray, noirContrast));
+            // Optimized grayscale
+            float gray = dot(finalCol, vec3(0.3, 0.59, 0.11));
+            vec3 noirGray = vec3(pow(gray, 1.5)); // Simpler contrast
             finalCol = mix(noirGray, finalCol, satFactor);
 
             float vig = 1.0 - smoothstep(0.3, 1.8, length(vTexCoord - 0.5) * 1.5);
             finalCol *= vig;
             
             finalCol = finalCol / (finalCol + vec3(1.2)); 
-            finalCol = pow(finalCol, vec3(1.0/1.8)); 
+            finalCol = pow(finalCol, vec3(0.55)); // Approx 1.0/1.8
 
             gl_FragColor = vec4(finalCol, 1.0);
         }
@@ -420,6 +416,13 @@
     // --- Setup ---
     function setup() {
         let cnv = createCanvas(windowWidth, windowHeight, WEBGL);
+        
+        // --- PERFORMANCE CRITICAL FIX ---
+        // Force pixel density to 1. This prevents Retina/High-DPI rendering 
+        // which kills performance on mobile shaders.
+        pixelDensity(1); 
+        // -------------------------------
+
         cnv.style('z-index', '1'); 
         cnv.id('defaultCanvas0');
         noStroke();
@@ -429,7 +432,6 @@
         fft = new p5.FFT(0.8, 32); 
         amplitude = new p5.Amplitude(); 
         
-        // Default mic
         fft.setInput(mic);
         amplitude.setInput(mic);
         
