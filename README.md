@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v10.6 Ultimate Control</title>
+    <title>Aether VJ v11.0 Smooth Criminal</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -489,6 +489,19 @@
             ytX: 0.0, ytY: 0.0, ytMuted: false,
             gridVisible: true, particlesVisible: true, borderVisible: true
         },
+        
+        // Smooth Transitions State
+        toggles: {
+            grid: { val: 1.0, target: 1.0 },
+            part: { val: 1.0, target: 1.0 },
+            border: { val: 1.0, target: 1.0 }
+        },
+        palette: {
+            prev: 0,
+            curr: 0,
+            mix: 1.0 // 0.0 = prev, 1.0 = curr
+        },
+
         dynamicBorder: { width: 0.0, density: 5.0, alpha: 0.8, distortion: 0.5 },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0, drift: 0, paletteTime: 0
@@ -514,8 +527,13 @@
         uniform vec3 u_params; 
         uniform float u_react; 
         uniform float u_saturation; 
-        uniform int u_colorMode;    
-        uniform float u_useAutoPalette; 
+        
+        // Palette uniforms
+        uniform int u_prevPalette;
+        uniform int u_currPalette;
+        uniform float u_paletteMix;
+        
+        uniform float u_useAutoPalette; // Kept for compat, currently always 0
         uniform float u_paletteTime;    
         uniform float u_gridSize; 
         uniform float u_lineWeight; 
@@ -554,23 +572,23 @@
         }
         void getThemeColors(int mode, float t, float audioBoost, out vec3 colBG, out vec3 colStruct, out vec3 colPart) {
             float beat = audioBoost * 0.5;
-            if (mode == 0) {
+            if (mode == 0) { // Rainbow
                  colBG = getRainbow(t + beat * 0.2, u_drift * 0.1);
                  colStruct = vec3(0.2, 0.9, 1.0) + beat * 0.3; 
                  colPart = getRainbow(t + 0.5 + beat * 0.3, 0.1);
-            } else if (mode == 1) {
+            } else if (mode == 1) { // Cyberpunk
                  colBG = mix(vec3(0.1, 0.0, 0.2), vec3(0.6, 0.0, 0.5), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(0.0, 0.9, 1.0) * (1.0 + beat);
                  colPart = vec3(1.0, 0.2, 0.6) + beat * 0.5;
-            } else if (mode == 2) {
+            } else if (mode == 2) { // Heatwave
                  colBG = mix(vec3(0.2, 0.0, 0.0), vec3(0.5, 0.1, 0.0), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(1.0, 0.5 + beat*0.5, 0.0); 
                  colPart = vec3(1.0, 0.8, 0.2) * (1.0 + beat*2.0);
-            } else if (mode == 3) {
+            } else if (mode == 3) { // Deep Ocean
                  colBG = mix(vec3(0.0, 0.05, 0.2), vec3(0.0, 0.2, 0.4), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(0.0, 0.7, 0.8) * (0.8 + beat*0.4);
                  colPart = vec3(0.4, 1.0, 0.9) + beat;
-            } else {
+            } else { // Forest
                  colBG = mix(vec3(0.0, 0.2, 0.05), vec3(0.1, 0.4, 0.1), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(0.2, 0.9, 0.3) * (1.0 + beat*0.5);
                  colPart = vec3(0.7, 1.0, 0.2) + beat;
@@ -612,15 +630,24 @@
             float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y * 3.0, 2.0) * (1.0 + u_bass * 0.8);
             structureIntensity += structureIntensity * lineNoise * 0.5; 
             
+            // Smooth Grid Toggle
             structureIntensity *= u_showGrid;
 
             vec3 themeBG, themeStruct, themePart;
             float themeTime = liquid * 0.5 + u_time * 0.05;
             float themeBeat = u_bass * u_react;
             
-            // Always use manual selection, but modulate with audio
-            getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
+            // --- PALETTE MIXING LOGIC ---
+            vec3 bg1, st1, pt1;
+            vec3 bg2, st2, pt2;
             
+            getThemeColors(u_prevPalette, themeTime, themeBeat, bg1, st1, pt1);
+            getThemeColors(u_currPalette, themeTime, themeBeat, bg2, st2, pt2);
+            
+            themeBG = mix(bg1, bg2, u_paletteMix);
+            themeStruct = mix(st1, st2, u_paletteMix);
+            themePart = mix(pt1, pt2, u_paletteMix);
+
             vec2 borderUV = centered;
             if (u_react > 0.1) {
                 float distAmt = u_borderParams.w * 0.5; 
@@ -645,6 +672,7 @@
             float borderIntensity = borderLines * borderZone * u_borderParams.z * (1.0 + u_treble * u_react);
             borderIntensity *= opacityMod; 
             
+            // Smooth Border Toggle
             borderIntensity *= u_showBorder;
 
             float particleIntensity = 0.0;
@@ -673,6 +701,7 @@
             }
             particleIntensity *= min(u_params.z * 2.0, 1.2); 
             
+            // Smooth Particle Toggle
             particleIntensity *= u_showParticles;
 
             vec3 borderCol = themePart * borderIntensity; 
@@ -704,9 +733,6 @@
             else if(id === 'imgYParam') document.getElementById('val-img-y').innerText = val.toFixed(2);
             else if(id === 'ytXParam') document.getElementById('val-yt-x').innerText = val.toFixed(2);
             else if(id === 'ytYParam') document.getElementById('val-yt-y').innerText = val.toFixed(2);
-            else if(id === 'borderDistortion') el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
-            else if(id === 'borderWidth') el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
-            else if(id === 'borderAlpha') el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
             else el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
         }
     }
@@ -733,12 +759,14 @@
         } else if (key === 'c' || key === 'C') {
             toggleBorder();
         } else if (keyCode === SHIFT) {
-            // Cycle Palette
+            // Cycle Palette with fade
+            state.palette.prev = state.palette.curr;
+            state.palette.curr = (state.palette.curr + 1) % 5;
+            state.palette.mix = 0.0; // Start Fade
+            
             let select = document.getElementById('paletteSelect');
-            let current = parseInt(select.value);
-            let next = (current + 1) % 5; // Assuming 5 options
-            select.value = next;
-            state.global.colorMode = next;
+            select.value = state.palette.curr;
+            state.global.colorMode = state.palette.curr;
         }
 
         if (changed) {
@@ -750,19 +778,20 @@
 
     // --- TOGGLES ---
     window.toggleGrid = () => {
-        state.global.gridVisible = !state.global.gridVisible;
+        // Toggle target state 0 or 1
+        state.toggles.grid.target = state.toggles.grid.target > 0.5 ? 0.0 : 1.0;
         const btn = document.getElementById('grid-toggle-btn');
-        if(state.global.gridVisible) btn.classList.add('active'); else btn.classList.remove('active');
+        if(state.toggles.grid.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
     }
     window.toggleParticles = () => {
-        state.global.particlesVisible = !state.global.particlesVisible;
+        state.toggles.part.target = state.toggles.part.target > 0.5 ? 0.0 : 1.0;
         const btn = document.getElementById('part-toggle-btn');
-        if(state.global.particlesVisible) btn.classList.add('active'); else btn.classList.remove('active');
+        if(state.toggles.part.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
     }
     window.toggleBorder = () => {
-        state.global.borderVisible = !state.global.borderVisible;
+        state.toggles.border.target = state.toggles.border.target > 0.5 ? 0.0 : 1.0;
         const btn = document.getElementById('border-toggle-btn');
-        if(state.global.borderVisible) btn.classList.add('active'); else btn.classList.remove('active');
+        if(state.toggles.border.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
     }
 
     window.toggleImgVisibility = () => {
@@ -818,7 +847,6 @@
         };
 
         const onPlayerReady = (event) => {
-            // 2-step force play
             event.target.mute();
             event.target.playVideo();
             setTimeout(() => {
@@ -840,7 +868,7 @@
                 height: '100%', width: '100%',
                 videoId: vidId,
                 playerVars: { 
-                    'autoplay': 1, 'controls': 0, 'mute': 1, // Init mute for autoplay
+                    'autoplay': 1, 'controls': 0, 'mute': 1, 
                     'loop': 1, 'playlist': vidId,
                     'origin': window.location.origin
                 },
@@ -852,7 +880,6 @@
         }
         updateYTStyles();
 
-        // Sync: Restart Audio
         if(soundFile && soundFile.isLoaded()) {
             soundFile.jump(0);
             if(!soundFile.isPlaying()) soundFile.play();
@@ -904,7 +931,10 @@
 
         const paletteSelect = document.getElementById('paletteSelect');
         paletteSelect.addEventListener('change', (e) => {
-             state.global.colorMode = parseInt(e.target.value);
+             state.palette.prev = state.palette.curr;
+             state.palette.curr = parseInt(e.target.value);
+             state.palette.mix = 0.0; // start fade
+             state.global.colorMode = state.palette.curr;
         });
 
         const controls = [
@@ -919,7 +949,6 @@
         controls.forEach((id) => {
             const el = document.getElementById(id);
             if(el) {
-                // Track active slider
                 el.addEventListener('mousedown', () => activeSlider = id);
                 el.addEventListener('touchstart', () => activeSlider = id);
                 el.addEventListener('mouseup', () => activeSlider = null);
@@ -927,7 +956,6 @@
 
                 el.addEventListener('input', (e) => {
                     let val = parseFloat(e.target.value);
-                    // --- MAPPING ---
                     if(id === 'param1') state.params[0] = val; 
                     else if(id === 'saturationSlider') state.global.saturation = val; 
                     else if(id === 'reactivity') state.global.react = val;
@@ -1147,24 +1175,41 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
-        // Flow uses Bass kick
+        // Smooth Toggles Logic
+        state.toggles.grid.val = lerp(state.toggles.grid.val, state.toggles.grid.target, 0.1);
+        state.toggles.part.val = lerp(state.toggles.part.val, state.toggles.part.target, 0.1);
+        state.toggles.border.val = lerp(state.toggles.border.val, state.toggles.border.target, 0.1);
+
+        // Smooth Palette Logic
+        if (state.palette.mix < 1.0) {
+            state.palette.mix += 0.05; // Transition speed
+            if (state.palette.mix > 1.0) state.palette.mix = 1.0;
+        }
+
         let speedVal = state.params[0]; 
         let increment = 0;
 
         if (state.syncMode) {
-            // Bass kick flow
-            let flowBoost = pow(state.avgBass, 2.0) * state.global.react * 0.5;
-            
             let minDrift = speedVal * 0.0002; 
             let dynamicJump = speedVal * 0.15 * pow(state.avgBass, 4.0) * state.global.react;
             increment = minDrift + dynamicJump;
             state.drift += 0.002 + (state.avgBass * 0.01); 
             state.paletteTime += 0.005 + (state.avgBass * 0.05);
             
-            // --- ALIVE UI LOGIC ---
-            // FLOW BAR
-            let targetFlow = state.params[0] + flowBoost;
-            if(activeSlider !== 'param1') updateSliderUI('param1', targetFlow);
+            // ALIVE UI: BORDER
+            let borderDist = state.global.borderDistortion + (state.avgBass * 0.5 * state.global.react);
+            let borderWidth = state.global.borderWidth + (state.avgBass * 0.2 * state.global.react);
+            let borderAlpha = state.global.borderAlpha + (state.avgTreble * 0.3 * state.global.react);
+            if(borderAlpha > 1.0) borderAlpha = 1.0;
+            
+            if(activeSlider !== 'borderDistortion') updateSliderUI('borderDistortion', borderDist);
+            if(activeSlider !== 'borderWidth') updateSliderUI('borderWidth', borderWidth);
+            if(activeSlider !== 'borderAlpha') updateSliderUI('borderAlpha', borderAlpha);
+            
+            // Param 1 (Flow) visual update
+            let flowBoost = pow(state.avgBass, 2.0) * state.global.react * 0.5;
+            if(activeSlider !== 'param1') updateSliderUI('param1', state.params[0] + flowBoost);
+
         } else {
             let baseSpeed = speedVal * 0.02;
             let audioBoost = state.avgVol * 0.2 * state.global.react;
@@ -1174,52 +1219,9 @@
         
         state.customTime += increment;
 
-        let targetP = [0, 0, 0];
-        let targetBorder = { 
-            width: state.global.borderWidth, 
-            density: state.global.borderDensity, 
-            alpha: state.global.borderAlpha,
-            distortion: state.global.borderDistortion 
-        };
-
-        if (state.syncMode) {
-            targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
-            targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
-            targetP[2] = Math.min(1.0, state.params[2] + (state.avgTreble * 1.5 * state.global.react)); 
-            rotAccumulator += (0.0005 + state.avgVol * 0.05); 
-            
-            // BORDER ANIMATION
-            // Width pulses with bass
-            targetBorder.width = state.global.borderWidth + (state.avgBass * 0.2 * state.global.react);
-            // Alpha flickers with mid/treble
-            targetBorder.alpha = state.global.borderAlpha + (state.avgTreble * 0.3 * state.global.react);
-            if(targetBorder.alpha > 1.0) targetBorder.alpha = 1.0;
-            // Distortion moves with bass
-            targetBorder.distortion = state.global.borderDistortion + (state.avgBass * 0.5 * state.global.react);
-            
-            // UPDATE BORDER SLIDERS
-            if(activeSlider !== 'borderWidth') updateSliderUI('borderWidth', targetBorder.width);
-            if(activeSlider !== 'borderAlpha') updateSliderUI('borderAlpha', targetBorder.alpha);
-            if(activeSlider !== 'borderDistortion') updateSliderUI('borderDistortion', targetBorder.distortion);
-
-            // Update other params sliders
-            if(activeSlider !== 'param2') updateSliderUI('param2', targetP[1]);
-            if(activeSlider !== 'param3') updateSliderUI('param3', targetP[2]);
-
-        } else {
-            targetP = [...state.params];
-            rotAccumulator += 0.0005;
-        }
-
         for(let i=0; i<3; i++) {
-            state.dynamicParams[i] = lerp(state.dynamicParams[i], targetP[i], 0.05);
-            state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
+            state.dynamicParams[i] = lerp(state.dynamicParams[i], state.params[i], 0.1);
         }
-
-        state.dynamicBorder.width = lerp(state.dynamicBorder.width, targetBorder.width, 0.1);
-        state.dynamicBorder.density = lerp(state.dynamicBorder.density, targetBorder.density, 0.1);
-        state.dynamicBorder.alpha = lerp(state.dynamicBorder.alpha, targetBorder.alpha, 0.1);
-        state.dynamicBorder.distortion = lerp(state.dynamicBorder.distortion, targetBorder.distortion, 0.1);
 
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
@@ -1229,8 +1231,14 @@
         myShader.setUniform('u_react', state.global.react); 
         myShader.setUniform('u_saturation', state.global.saturation); 
         myShader.setUniform('u_colorMode', state.global.colorMode); 
-        myShader.setUniform('u_useAutoPalette', state.syncMode ? 1.0 : 0.0);
+        myShader.setUniform('u_useAutoPalette', 0.0); // Always 0 for manual mix
         myShader.setUniform('u_paletteTime', state.paletteTime);
+        
+        // Palette Mix Uniforms
+        myShader.setUniform('u_prevPalette', state.palette.prev);
+        myShader.setUniform('u_currPalette', state.palette.curr);
+        myShader.setUniform('u_paletteMix', state.palette.mix);
+
         myShader.setUniform('u_gridSize', state.global.gridSize); 
         myShader.setUniform('u_lineWeight', state.global.lineWeight); 
         myShader.setUniform('u_rot', rotAccumulator);
@@ -1240,15 +1248,16 @@
         myShader.setUniform('u_vol', state.avgVol);
         
         myShader.setUniform('u_borderParams', [
-            state.dynamicBorder.width, 
-            state.dynamicBorder.density, 
-            state.dynamicBorder.alpha, 
-            state.dynamicBorder.distortion
+            state.global.borderWidth, 
+            state.global.borderDensity, 
+            state.global.borderAlpha, 
+            state.global.borderDistortion
         ]);
         
-        myShader.setUniform('u_showGrid', state.global.gridVisible ? 1.0 : 0.0);
-        myShader.setUniform('u_showParticles', state.global.particlesVisible ? 1.0 : 0.0);
-        myShader.setUniform('u_showBorder', state.global.borderVisible ? 1.0 : 0.0);
+        // Pass smoothed toggle values
+        myShader.setUniform('u_showGrid', state.toggles.grid.val);
+        myShader.setUniform('u_showParticles', state.toggles.part.val);
+        myShader.setUniform('u_showBorder', state.toggles.border.val);
 
         rect(-width/2, -height/2, width, height);
 
