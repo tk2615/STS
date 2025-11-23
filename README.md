@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v6.2 Fixed</title>
+    <title>Aether VJ v6.6 Opacity</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -21,6 +21,7 @@
 
         .header { display: flex; align-items: flex-start; justify-content: space-between; pointer-events: auto; }
         .title-group { display: flex; flex-direction: column; gap: 10px; }
+        .title-row { display: flex; align-items: center; gap: 15px; }
         
         .reload-btn {
             background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
@@ -166,7 +167,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START</div>
+    <div class="sub-text">START v6.6</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -249,6 +250,11 @@
             <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
         </div>
 
+        <div class="slider-group" id="grp-img-opacity">
+            <div class="label-row"><label>Image Opacity</label> <span class="value" id="val-img-opacity">1.0</span></div>
+            <input type="range" id="imgOpacityParam" min="0" max="1" step="0.01" value="1.0">
+        </div>
+
         <div class="slider-group">
             <div class="label-row"><label>Image X (Pos)</label> <span class="value" id="val-img-x">0.0</span></div>
             <input type="range" id="imgXParam" min="-1" max="1" step="0.01" value="0.0">
@@ -292,7 +298,9 @@
         global: { 
             react: 1.5, gridSize: 0.5, lineWeight: 0.3, 
             saturation: 0.8, colorMode: 0, 
-            rot: 0.0, imgSize: 0.5, imgX: 0.0, imgY: 0.0, imgVisible: true
+            rot: 0.0, 
+            imgSize: 0.5, imgOpacity: 1.0, // Added Opacity
+            imgX: 0.0, imgY: 0.0, imgVisible: true
         },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0,
@@ -309,7 +317,6 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
-    // --- UPDATED SHADER: ANTI-CLIPPING ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
@@ -438,16 +445,13 @@
                     float x_freq = 2.0 + n * 3.0;
                     float y_freq = 2.0 + fract(n * 10.0) * 3.0;
                     
-                    // FIX: Clamp position shake to avoid clipping at cell borders
                     float shake = min(u_treble * u_react, 0.4);
                     
                     float posX = sin(t * x_freq + n * 10.0) * (0.6 + shake);
                     float posY = cos(t * y_freq + n * 20.0) * (0.6 + shake);
                     float z_pos = sin(t * 1.5 + n * 5.0) * 1.5; 
-                    
                     vec2 pOffset = neighbor + vec2(posX, posY);
                     
-                    // Compensate movement limit with larger size/glow
                     float sizeBoost = 1.0 + shake * 2.0;
                     float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * sizeBoost;
                     
@@ -536,7 +540,7 @@
              state.global.colorMode = parseInt(e.target.value);
         });
 
-        ['param1', 'saturationSlider', 'param3', 'gridSize', 'gridLine', 'param2', 'imgSizeParam', 'imgXParam', 'imgYParam', 'reactivity'].forEach((id) => {
+        ['param1', 'saturationSlider', 'param3', 'gridSize', 'gridLine', 'param2', 'imgSizeParam', 'imgOpacityParam', 'imgXParam', 'imgYParam', 'reactivity'].forEach((id) => {
             const el = document.getElementById(id);
             if(el) {
                 el.addEventListener('input', (e) => {
@@ -548,6 +552,7 @@
                     else if(id === 'gridLine') state.global.lineWeight = val; 
                     else if(id === 'param2') state.params[1] = val; 
                     else if(id === 'imgSizeParam') state.global.imgSize = val; 
+                    else if(id === 'imgOpacityParam') state.global.imgOpacity = val; // NEW
                     else if(id === 'imgXParam') state.global.imgX = val; 
                     else if(id === 'imgYParam') state.global.imgY = val; 
                     else if(id === 'reactivity') state.global.react = val; 
@@ -605,6 +610,7 @@
         });
     }
 
+    // Simple Image Handler (GIF logic removed)
     function handleImageSelect(fileInput) {
         if (fileInput.files.length === 0) return;
         const file = fileInput.files[0];
@@ -671,11 +677,7 @@
         if (state.syncMode) {
             targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
             targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
-            
-            // FIX: Clamp max particle param to 1.0 (User's request)
-            // Also using shader clamp logic for movement
             targetP[2] = Math.min(1.0, state.params[2] + (state.avgTreble * 1.5 * state.global.react)); 
-            
             rotAccumulator += (0.0005 + state.avgVol * 0.05); 
         } else {
             targetP = [...state.params];
@@ -705,35 +707,42 @@
         myShader.setUniform('u_vol', state.avgVol);
         rect(-width/2, -height/2, width, height);
 
-        // 2. Draw Image Plane (Force on top)
+        // 2. Draw Image Plane (Force on top) with Opacity
         if (centerImg && state.global.imgVisible) {
-            resetShader(); 
-            push();
-            let gl = this._renderer.GL;
-            gl.disable(gl.DEPTH_TEST);
-            
-            let offX = state.global.imgX * (width / 2); 
-            let offY = state.global.imgY * (height / 2); 
-            translate(offX, offY, 100); 
-            noLights(); 
-            
-            let aspect = centerImg.width / centerImg.height;
-            let baseScale = min(width, height) * 0.8; 
-            let displayW, displayH;
+            if (centerImg.width > 0) {
+                resetShader(); 
+                push();
+                let gl = this._renderer.GL;
+                gl.disable(gl.DEPTH_TEST);
+                
+                let offX = state.global.imgX * (width / 2); 
+                let offY = state.global.imgY * (height / 2); 
+                
+                translate(offX, offY, 100); 
+                noLights(); 
+                
+                let aspect = centerImg.width / centerImg.height;
+                let baseScale = min(width, height) * 0.8; 
+                let displayW, displayH;
 
-            if (aspect > 1) {
-                displayW = baseScale * state.global.imgSize;
-                displayH = displayW / aspect;
-            } else {
-                displayH = baseScale * state.global.imgSize;
-                displayW = displayH * aspect;
+                if (aspect > 1) {
+                    displayW = baseScale * state.global.imgSize;
+                    displayH = displayW / aspect;
+                } else {
+                    displayH = baseScale * state.global.imgSize;
+                    displayW = displayH * aspect;
+                }
+
+                // APPLY OPACITY using tint()
+                tint(255, state.global.imgOpacity * 255);
+                
+                texture(centerImg);
+                noStroke();
+                plane(displayW, displayH);
+                
+                gl.enable(gl.DEPTH_TEST);
+                pop();
             }
-
-            texture(centerImg);
-            noStroke();
-            plane(displayW, displayH);
-            gl.enable(gl.DEPTH_TEST);
-            pop();
         }
     }
 
