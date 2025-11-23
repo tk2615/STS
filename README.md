@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v10.3 Total Immersion</title>
+    <title>Aether VJ v10.6 Ultimate Control</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -38,7 +38,6 @@
             cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); backdrop-filter: blur(10px);
             opacity: 1; transform: translateY(0);
         }
-        /* Hidden state for Sync Switch */
         .sync-switch.hidden { opacity: 0; pointer-events: none; transform: translateY(-20px); }
         
         .sync-switch:hover { background: rgba(255,255,255,0.1); }
@@ -69,18 +68,14 @@
             right: 20px;
             bottom: 100px;
             width: 520px;
-            
             background: rgba(10, 10, 10, 0.6); 
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
             padding: 0;
-            
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             z-index: 101;
-            
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
         }
         .controls-panel.hidden { transform: translateX(120%); opacity: 0; pointer-events: none; }
 
@@ -124,7 +119,7 @@
         }
 
         #viz-canvas {
-            width: 100%; height: 40px; background: rgba(0,0,0,0.3);
+            width: 100%; height: 30px; background: rgba(0,0,0,0.3);
             border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;
             border-radius: 2px; display: block; flex-shrink: 0;
         }
@@ -460,7 +455,7 @@
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">▶</button>
     </div>
 </div>
-<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | ENTER=UI | ARROWS=FX | Z=PARTICLE | X=GRID | C=BORDER</div>
+<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | ENTER=UI | ARROWS=FX | SHIFT=PALETTE | Z=PART | X=GRID | C=BORDER</div>
 
 <script>
     const MAX_FILE_SIZE = 20 * 1024 * 1024; 
@@ -564,19 +559,19 @@
                  colStruct = vec3(0.2, 0.9, 1.0) + beat * 0.3; 
                  colPart = getRainbow(t + 0.5 + beat * 0.3, 0.1);
             } else if (mode == 1) {
-                 colBG = mix(vec3(0.1, 0.0, 0.2), vec3(0.6, 0.0, 0.5), sin(t + beat)*0.5+0.5);
+                 colBG = mix(vec3(0.1, 0.0, 0.2), vec3(0.6, 0.0, 0.5), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(0.0, 0.9, 1.0) * (1.0 + beat);
                  colPart = vec3(1.0, 0.2, 0.6) + beat * 0.5;
             } else if (mode == 2) {
-                 colBG = mix(vec3(0.2, 0.0, 0.0), vec3(0.5, 0.1, 0.0), sin(t*0.7 + beat)*0.5+0.5);
+                 colBG = mix(vec3(0.2, 0.0, 0.0), vec3(0.5, 0.1, 0.0), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(1.0, 0.5 + beat*0.5, 0.0); 
                  colPart = vec3(1.0, 0.8, 0.2) * (1.0 + beat*2.0);
             } else if (mode == 3) {
-                 colBG = mix(vec3(0.0, 0.05, 0.2), vec3(0.0, 0.2, 0.4), sin(t*0.5 + beat*0.2)*0.5+0.5);
+                 colBG = mix(vec3(0.0, 0.05, 0.2), vec3(0.0, 0.2, 0.4), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(0.0, 0.7, 0.8) * (0.8 + beat*0.4);
                  colPart = vec3(0.4, 1.0, 0.9) + beat;
             } else {
-                 colBG = mix(vec3(0.0, 0.2, 0.05), vec3(0.1, 0.4, 0.1), sin(t*0.6 + beat*0.3)*0.5+0.5);
+                 colBG = mix(vec3(0.0, 0.2, 0.05), vec3(0.1, 0.4, 0.1), sin(t*2.0 + beat*2.0)*0.5+0.5);
                  colStruct = vec3(0.2, 0.9, 0.3) * (1.0 + beat*0.5);
                  colPart = vec3(0.7, 1.0, 0.2) + beat;
             }
@@ -622,19 +617,10 @@
             vec3 themeBG, themeStruct, themePart;
             float themeTime = liquid * 0.5 + u_time * 0.05;
             float themeBeat = u_bass * u_react;
-            if (u_useAutoPalette > 0.5) {
-                int modeA = int(mod(u_paletteTime, 5.0));
-                int modeB = int(mod(u_paletteTime + 1.0, 5.0));
-                float mixFactor = fract(u_paletteTime);
-                vec3 bg1, st1, pt1; vec3 bg2, st2, pt2;
-                getThemeColors(modeA, themeTime, themeBeat, bg1, st1, pt1);
-                getThemeColors(modeB, themeTime, themeBeat, bg2, st2, pt2);
-                themeBG = mix(bg1, bg2, mixFactor);
-                themeStruct = mix(st1, st2, mixFactor);
-                themePart = mix(pt1, pt2, mixFactor);
-            } else {
-                getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
-            }
+            
+            // Always use manual selection, but modulate with audio
+            getThemeColors(u_colorMode, themeTime, themeBeat, themeBG, themeStruct, themePart);
+            
             vec2 borderUV = centered;
             if (u_react > 0.1) {
                 float distAmt = u_borderParams.w * 0.5; 
@@ -718,6 +704,9 @@
             else if(id === 'imgYParam') document.getElementById('val-img-y').innerText = val.toFixed(2);
             else if(id === 'ytXParam') document.getElementById('val-yt-x').innerText = val.toFixed(2);
             else if(id === 'ytYParam') document.getElementById('val-yt-y').innerText = val.toFixed(2);
+            else if(id === 'borderDistortion') el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
+            else if(id === 'borderWidth') el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
+            else if(id === 'borderAlpha') el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
             else el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
         }
     }
@@ -743,6 +732,13 @@
             toggleGrid();
         } else if (key === 'c' || key === 'C') {
             toggleBorder();
+        } else if (keyCode === SHIFT) {
+            // Cycle Palette
+            let select = document.getElementById('paletteSelect');
+            let current = parseInt(select.value);
+            let next = (current + 1) % 5; // Assuming 5 options
+            select.value = next;
+            state.global.colorMode = next;
         }
 
         if (changed) {
@@ -1134,7 +1130,6 @@
         let vol = amplitude.getLevel();
 
         if (!state.uiHidden) {
-            // Update viz to match new larger width
             const w = vizCtx.canvas.width;
             const h = vizCtx.canvas.height;
             vizCtx.clearRect(0, 0, w, h);
@@ -1152,15 +1147,24 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
+        // Flow uses Bass kick
         let speedVal = state.params[0]; 
         let increment = 0;
 
         if (state.syncMode) {
+            // Bass kick flow
+            let flowBoost = pow(state.avgBass, 2.0) * state.global.react * 0.5;
+            
             let minDrift = speedVal * 0.0002; 
             let dynamicJump = speedVal * 0.15 * pow(state.avgBass, 4.0) * state.global.react;
             increment = minDrift + dynamicJump;
             state.drift += 0.002 + (state.avgBass * 0.01); 
             state.paletteTime += 0.005 + (state.avgBass * 0.05);
+            
+            // --- ALIVE UI LOGIC ---
+            // FLOW BAR
+            let targetFlow = state.params[0] + flowBoost;
+            if(activeSlider !== 'param1') updateSliderUI('param1', targetFlow);
         } else {
             let baseSpeed = speedVal * 0.02;
             let audioBoost = state.avgVol * 0.2 * state.global.react;
@@ -1184,17 +1188,23 @@
             targetP[2] = Math.min(1.0, state.params[2] + (state.avgTreble * 1.5 * state.global.react)); 
             rotAccumulator += (0.0005 + state.avgVol * 0.05); 
             
-            if (state.global.borderWidth > 0.01) {
-                targetBorder.width = state.global.borderWidth + (state.avgBass * 0.1 * state.global.react);
-                targetBorder.alpha = Math.min(1.0, state.global.borderAlpha + (state.avgTreble * 0.2));
-                targetBorder.distortion = state.global.borderDistortion + (state.avgBass * state.global.react);
-            }
+            // BORDER ANIMATION
+            // Width pulses with bass
+            targetBorder.width = state.global.borderWidth + (state.avgBass * 0.2 * state.global.react);
+            // Alpha flickers with mid/treble
+            targetBorder.alpha = state.global.borderAlpha + (state.avgTreble * 0.3 * state.global.react);
+            if(targetBorder.alpha > 1.0) targetBorder.alpha = 1.0;
+            // Distortion moves with bass
+            targetBorder.distortion = state.global.borderDistortion + (state.avgBass * 0.5 * state.global.react);
             
-            // --- ALIVE UI UPDATES ---
-            if(activeSlider !== 'param1') updateSliderUI('param1', targetP[0]);
+            // UPDATE BORDER SLIDERS
+            if(activeSlider !== 'borderWidth') updateSliderUI('borderWidth', targetBorder.width);
+            if(activeSlider !== 'borderAlpha') updateSliderUI('borderAlpha', targetBorder.alpha);
+            if(activeSlider !== 'borderDistortion') updateSliderUI('borderDistortion', targetBorder.distortion);
+
+            // Update other params sliders
             if(activeSlider !== 'param2') updateSliderUI('param2', targetP[1]);
             if(activeSlider !== 'param3') updateSliderUI('param3', targetP[2]);
-            if(activeSlider !== 'borderDistortion') updateSliderUI('borderDistortion', targetBorder.distortion);
 
         } else {
             targetP = [...state.params];
@@ -1280,11 +1290,7 @@
         state.uiHidden = !state.uiHidden;
         document.getElementById('ctrl-panel').classList.toggle('hidden', state.uiHidden);
         document.getElementById('btm-bar').classList.toggle('hidden', state.uiHidden);
-        // Toggle Sync button too
         document.getElementById('sync-btn').classList.toggle('hidden', state.uiHidden);
-        
-        // Also toggle open button
-        // No, open button is handled by CSS selector .hidden ~ .open-btn-fixed
     };
     
     window.toggleSync = () => {
