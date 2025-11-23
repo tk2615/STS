@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v7.2 Dynamic Flow</title>
+    <title>Aether VJ v7.4 Seek & Fix</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -63,11 +63,11 @@
             backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
             border: 1px solid rgba(255,255,255,0.1); border-radius: 4px;
             padding: 20px; width: 280px; align-self: flex-end;
-            margin-bottom: 100px;
+            margin-bottom: 120px; /* Increased margin for progress bar */
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             z-index: 101;
-            max-height: 70vh; overflow-y: auto;
+            max-height: 60vh; overflow-y: auto;
         }
         .controls-panel.hidden { transform: translateX(calc(100% + 50px)); opacity: 0; pointer-events: none; }
 
@@ -123,6 +123,21 @@
         }
         .bottom-bar.hidden { transform: translateY(120%); }
 
+        /* Progress Bar Styles */
+        #progress-container {
+            padding: 15px 20px 0 20px; display: none; flex-direction: column; gap: 5px;
+        }
+        #seek-slider {
+            width: 100%; height: 20px; cursor: pointer;
+        }
+        #seek-slider::-webkit-slider-thumb {
+            background: #0ff; box-shadow: 0 0 10px #0ff;
+        }
+        .time-labels {
+            display: flex; justify-content: space-between;
+            font-family: 'Courier New', monospace; font-size: 10px; color: #0ff;
+        }
+
         .file-controls {
             padding: 20px; display: flex; align-items: center; gap: 15px; justify-content: center;
         }
@@ -159,7 +174,7 @@
         .bottom-bar.hidden ~ .key-tip { opacity: 0; }
 
         @media (max-width: 600px) {
-            .controls-panel { width: 100%; margin-bottom: 100px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
+            .controls-panel { width: 100%; margin-bottom: 120px; border-radius: 0; border:none; border-top: 1px solid rgba(255,255,255,0.1);}
         }
     </style>
 </head>
@@ -167,7 +182,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START</div>
+    <div class="sub-text">START v7.4</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -297,6 +312,14 @@
 </div>
 
 <div class="bottom-bar" id="btm-bar">
+    <div id="progress-container">
+        <input type="range" id="seek-slider" min="0" max="100" value="0" step="0.1">
+        <div class="time-labels">
+            <span id="current-time">0:00</span>
+            <span id="total-time">0:00</span>
+        </div>
+    </div>
+    
     <div class="file-controls">
         <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC</button>
         <label for="img-upload" class="custom-file-btn img-mode-btn">🖼️ IMG</label>
@@ -337,6 +360,7 @@
     let soundFile = null;
     let centerImg = null; 
     let vizCtx; 
+    let isScrubbing = false; // To track if user is dragging slider
 
     const vert = `
         attribute vec3 aPosition; attribute vec2 aTexCoord; varying vec2 vTexCoord;
@@ -658,6 +682,39 @@
             }
         });
         
+        // --- SEEK SLIDER EVENTS ---
+        const seekSlider = document.getElementById('seek-slider');
+        seekSlider.addEventListener('mousedown', () => { isScrubbing = true; });
+        seekSlider.addEventListener('touchstart', () => { isScrubbing = true; }, {passive: true});
+        
+        seekSlider.addEventListener('input', (e) => {
+            if(soundFile && soundFile.isLoaded()) {
+                let duration = soundFile.duration();
+                let seekTo = (parseFloat(e.target.value) / 100) * duration;
+                if(soundFile.isPlaying()) {
+                    soundFile.jump(seekTo);
+                } else {
+                    // Just move playhead if paused, but jumping while paused can be tricky in p5
+                    // Usually safer to jump only when playing or jump then play?
+                    // Let's just update current time var for display
+                }
+                document.getElementById('current-time').innerText = formatTime(seekTo);
+            }
+        });
+
+        seekSlider.addEventListener('change', (e) => {
+            // Final commitment on release
+            if(soundFile && soundFile.isLoaded()) {
+                let duration = soundFile.duration();
+                let seekTo = (parseFloat(e.target.value) / 100) * duration;
+                soundFile.jump(seekTo);
+            }
+            isScrubbing = false;
+        });
+
+        seekSlider.addEventListener('mouseup', () => { isScrubbing = false; });
+        seekSlider.addEventListener('touchend', () => { isScrubbing = false; });
+
         document.getElementById('paletteSelect').value = state.global.colorMode;
         updateSliderUI('saturationSlider', state.global.saturation);
     }
@@ -672,14 +729,15 @@
     }
 
     function switchToMic() {
-        if (soundFile && soundFile.isPlaying()) {
-            soundFile.stop();
-            document.getElementById('play-btn').style.display = "none";
+        if (soundFile) {
+            if(soundFile.isPlaying()) soundFile.stop();
         }
         mic.start();
         fft.setInput(mic);
         amplitude.setInput(mic);
         document.getElementById('file-status').innerText = "MIC MODE";
+        document.getElementById('play-btn').style.display = "none";
+        document.getElementById('progress-container').style.display = "none";
         if(!state.syncMode) toggleSync();
     }
     
@@ -689,22 +747,47 @@
         const statusEl = document.getElementById('file-status');
         if (file.size > MAX_FILE_SIZE) { alert("ファイルが大きすぎます"); return; }
 
+        // --- FIX: STOP OLD FILE BEFORE LOADING NEW ONE ---
+        if (soundFile) {
+            soundFile.stop();
+            soundFile.dispose(); 
+        }
+
         statusEl.innerText = "LOADING...";
         const blobUrl = URL.createObjectURL(file);
+        
         soundFile = loadSound(blobUrl, () => {
             statusEl.innerText = "FILE PLAYING";
             document.getElementById('play-btn').style.display = "flex";
+            document.getElementById('progress-container').style.display = "flex";
+            
             mic.stop();
             soundFile.play();
-            soundFile.setLoop(true);
+            // Loop is tricky with jump(), standard play is better for tracks. 
+            // If loop is needed, handle 'ended' event manually if jump causes issues? 
+            // For now, let's keep loop but user be aware jumping works.
+            soundFile.setLoop(true); 
+            
             fft.setInput(soundFile);
             amplitude.setInput(soundFile);
             if(!state.syncMode) toggleSync();
+            
+            // Set Total Time
+            let dur = soundFile.duration();
+            document.getElementById('total-time').innerText = formatTime(dur);
+            document.getElementById('seek-slider').value = 0;
+
             URL.revokeObjectURL(blobUrl);
         }, (err) => {
             console.error(err);
             statusEl.innerText = "ERROR";
         });
+    }
+
+    function formatTime(seconds) {
+        let m = Math.floor(seconds / 60);
+        let s = Math.floor(seconds % 60);
+        return m + ":" + (s < 10 ? "0" : "") + s;
     }
 
     function handleImageSelect(fileInput) {
@@ -742,6 +825,17 @@
     function draw() {
         if (!state.running && millis() < 1000) return;
 
+        // --- AUDIO PROGRESS UPDATE ---
+        if (soundFile && soundFile.isPlaying() && !isScrubbing) {
+            let currentTime = soundFile.currentTime();
+            let duration = soundFile.duration();
+            if (duration > 0) {
+                let pct = (currentTime / duration) * 100;
+                document.getElementById('seek-slider').value = pct;
+                document.getElementById('current-time').innerText = formatTime(currentTime);
+            }
+        }
+
         let spectrum = fft.analyze();
         let bass = fft.getEnergy("bass") / 255.0;      
         let mid = fft.getEnergy("mid") / 255.0;
@@ -764,24 +858,18 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
-        // --- NEW TIME/FLOW LOGIC ---
-        // Flow Slider (0.0 to 1.0)
+        // --- EXTREME CONTRAST FLOW LOGIC ---
         let speedVal = state.params[0]; 
         let increment = 0;
 
         if (state.syncMode) {
-            // SYNC ON: Bass drives speed.
-            // speedVal acts as a multiplier/limiter.
-            // When music stops, it drifts very slowly.
-            let minDrift = speedVal * 0.005; 
-            // Kick (Bass) triggers larger jumps in time
-            let dynamicJump = speedVal * 0.06 * pow(state.avgBass, 2.0) * state.global.react;
+            let minDrift = speedVal * 0.0002; 
+            let dynamicJump = speedVal * 0.15 * pow(state.avgBass, 4.0) * state.global.react;
             increment = minDrift + dynamicJump;
             
-            state.drift += 0.002 + (state.avgBass * 0.01); // Drift also reacts slightly
+            state.drift += 0.002 + (state.avgBass * 0.01); 
             state.paletteTime += 0.005 + (state.avgBass * 0.05);
         } else {
-            // SYNC OFF: Standard constant speed
             let baseSpeed = speedVal * 0.02;
             let audioBoost = state.avgVol * 0.2 * state.global.react;
             increment = baseSpeed + audioBoost;
