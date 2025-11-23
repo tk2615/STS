@@ -167,7 +167,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START v6.6</div>
+    <div class="sub-text">START</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
