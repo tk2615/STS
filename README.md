@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v5.1</title>
+    <title>Aether VJ v6.2 Fixed</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -21,8 +21,6 @@
 
         .header { display: flex; align-items: flex-start; justify-content: space-between; pointer-events: auto; }
         .title-group { display: flex; flex-direction: column; gap: 10px; }
-        .title-row { display: flex; align-items: center; gap: 15px; }
-        .title-group h1 { margin: 0; font-size: 11px; letter-spacing: 5px; opacity: 0.8; text-transform: uppercase; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
         
         .reload-btn {
             background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
@@ -45,6 +43,18 @@
         .sync-switch.active .switch-label { color: #fff; }
         @keyframes pulse-beat { 0% { opacity: 0.5; transform: scale(1.0); } 100% { opacity: 1.0; transform: scale(1.2); } }
 
+        /* Mini Switch */
+        .mini-switch {
+            width: 30px; height: 16px; background: #333; border-radius: 10px; position: relative; cursor: pointer; transition: background 0.2s;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .mini-switch.active { background: rgba(0, 255, 255, 0.3); border-color: #0ff; }
+        .mini-indicator {
+            width: 12px; height: 12px; background: #888; border-radius: 50%; 
+            position: absolute; top: 1px; left: 1px; transition: transform 0.2s, background 0.2s;
+        }
+        .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
+
         /* Controls Panel */
         .controls-panel {
             pointer-events: auto;
@@ -56,6 +66,7 @@
             transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.6s;
             box-shadow: 0 20px 50px rgba(0,0,0,0.8);
             z-index: 101;
+            max-height: 70vh; overflow-y: auto;
         }
         .controls-panel.hidden { transform: translateX(calc(100% + 50px)); opacity: 0; pointer-events: none; }
 
@@ -66,7 +77,7 @@
         }
 
         .slider-group { margin-bottom: 16px; position: relative; }
-        .label-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 6px; align-items: center; }
         label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; font-weight: 500; }
         .value { font-size: 9px; font-family: 'Courier New', monospace; color: #bbb; }
         
@@ -86,6 +97,13 @@
             background: #111; margin-top: -6px; box-shadow: 0 0 0 1px rgba(255,255,255,0.8); transition: transform 0.1s; 
         }
         input[type=range]:active::-webkit-slider-thumb { background: #fff; transform: scale(1.2); }
+
+        select {
+            width: 100%; background: rgba(0,0,0,0.5); color: #0ff; border: 1px solid rgba(0,255,255,0.3);
+            padding: 4px; font-size: 10px; border-radius: 4px; outline: none; cursor: pointer;
+            font-family: 'Courier New', monospace; text-transform: uppercase;
+        }
+        select option { background: #111; color: #ccc; }
 
         .toggle-btn-fixed {
             position: fixed; top: 25px; right: 25px; z-index: 200; pointer-events: auto;
@@ -129,8 +147,8 @@
             cursor: pointer; color: #fff; transition: opacity 0.5s ease-out;
             pointer-events: auto;
         }
-        .start-text { font-size: 16px; letter-spacing: 8px; font-weight: 700; margin-bottom: 20px; opacity: 1.0; text-align: center; pointer-events: none; color: #fff; text-shadow: 0 0 15px rgba(255,255,255,0.8); }
-        .sub-text { font-size: 12px; color: #0ff; letter-spacing: 3px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 12px 30px; border-radius: 30px; border: 1px solid rgba(0,255,255,0.5); pointer-events: none; font-weight: bold; box-shadow: 0 0 20px rgba(0,255,255,0.2); }
+        .start-text { font-size: 24px; letter-spacing: 8px; font-weight: 900; margin-bottom: 20px; opacity: 1.0; text-align: center; pointer-events: none; color: #fff; text-shadow: 0 0 20px rgba(0,255,255,0.8); }
+        .sub-text { font-size: 14px; color: #0ff; letter-spacing: 4px; text-transform: uppercase; background: rgba(0,255,255,0.1); padding: 15px 40px; border-radius: 40px; border: 1px solid rgba(0,255,255,0.5); pointer-events: none; font-weight: bold; box-shadow: 0 0 20px rgba(0,255,255,0.2); }
 
         .key-tip {
             position: absolute; bottom: 80px; width: 100%; text-align: center; 
@@ -148,7 +166,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START</div>
+    <div class="sub-text">START v6.2</div>
 </div>
 
 <div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
@@ -176,10 +194,21 @@
             <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
         </div>
 
-        <div class="slider-group" id="grp-color">
+        <div class="slider-group" style="margin-bottom: 12px;">
+            <div class="label-row"><label>Color Palette</label></div>
+            <select id="paletteSelect">
+                <option value="0">Rainbow (Classic)</option>
+                <option value="1">Cyberpunk (Pk/Cy)</option>
+                <option value="2">Heatwave (Rd/Or)</option>
+                <option value="3">Deep Ocean (Bl/Aq)</option>
+                <option value="4">Forest Neon (Gr/Li)</option>
+            </select>
+        </div>
+
+        <div class="slider-group" id="grp-saturation">
             <div class="sync-dot"></div>
-            <div class="label-row"><label>Color / Mono (↔)</label> <span class="value" id="val-color">0.1</span></div>
-            <input type="range" id="colorshift" min="0" max="1" step="0.01" value="0.1">
+            <div class="label-row"><label>Saturation (Mono↔Color)</label> <span class="value" id="val-saturation">0.8</span></div>
+            <input type="range" id="saturationSlider" min="0" max="1" step="0.01" value="0.8">
         </div>
 
         <div class="slider-group" id="grp-3">
@@ -206,9 +235,28 @@
             <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
         </div>
 
+        <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
+
+        <div class="slider-group" style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <label style="margin:0;">IMAGE OVERLAY</label>
+            <div class="mini-switch active" id="img-toggle-btn" onclick="toggleImgVisibility()">
+                <div class="mini-indicator"></div>
+            </div>
+        </div>
+
         <div class="slider-group" id="grp-img-size">
             <div class="label-row"><label>Image Scale</label> <span class="value" id="val-img-size">0.5</span></div>
             <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
+        </div>
+
+        <div class="slider-group">
+            <div class="label-row"><label>Image X (Pos)</label> <span class="value" id="val-img-x">0.0</span></div>
+            <input type="range" id="imgXParam" min="-1" max="1" step="0.01" value="0.0">
+        </div>
+
+        <div class="slider-group">
+            <div class="label-row"><label>Image Y (Pos)</label> <span class="value" id="val-img-y">0.0</span></div>
+            <input type="range" id="imgYParam" min="-1" max="1" step="0.01" value="0.0">
         </div>
         
         <hr style="border: 0; border-top: 1px solid rgba(255,255,255,0.08); margin: 15px 0;">
@@ -223,31 +271,29 @@
 <div class="bottom-bar" id="btm-bar">
     <div class="file-controls">
         <button class="custom-file-btn mic-mode-btn" onclick="switchToMic()">🎤 MIC</button>
-        
         <label for="img-upload" class="custom-file-btn img-mode-btn">🖼️ IMG</label>
         <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="handleImageSelect(this)">
-
         <div id="file-status">MIC MODE</div>
-        
         <label for="audio-upload" class="custom-file-btn">📂 FILE</label>
         <input type="file" id="audio-upload" accept=".mp3,audio/*" style="display:none" onchange="handleFileSelect(this)">
-        
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">❚❚</button>
     </div>
 </div>
-<div class="key-tip">KEYBOARD: ↔ COLOR &nbsp;|&nbsp; ↕ REACTIVITY</div>
+<div class="key-tip">KEYBOARD: ↔ SATURATION &nbsp;|&nbsp; ↕ REACTIVITY</div>
 
 <script>
-    // --- Configuration ---
     const MAX_FILE_SIZE = 20 * 1024 * 1024; 
 
-    // --- State Management ---
     let state = {
         running: false, uiHidden: false, 
         syncMode: false,
         params: [0.5, 0.3, 0.4], 
         dynamicParams: [0.5, 0.3, 0.4],
-        global: { react: 1.5, gridSize: 0.5, lineWeight: 0.3, paletteVal: 0.1, rot: 0.0, imgSize: 0.5 },
+        global: { 
+            react: 1.5, gridSize: 0.5, lineWeight: 0.3, 
+            saturation: 0.8, colorMode: 0, 
+            rot: 0.0, imgSize: 0.5, imgX: 0.0, imgY: 0.0, imgVisible: true
+        },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0,
         drift: 0 
@@ -263,13 +309,15 @@
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
+    // --- UPDATED SHADER: ANTI-CLIPPING ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
         uniform float u_time; uniform vec2 u_res;
         uniform vec3 u_params; 
         uniform float u_react; 
-        uniform float u_paletteVal; 
+        uniform float u_saturation; 
+        uniform int u_colorMode;    
         uniform float u_gridSize; 
         uniform float u_lineWeight; 
         uniform float u_drift; 
@@ -304,6 +352,31 @@
             vec3 c = vec3(1.0, 1.0, 1.0);
             vec3 d = vec3(0.0, 0.33, 0.67) + shift; 
             return a + b * cos( 6.28318 * (c * t + d) );
+        }
+
+        void getColorTheme(int mode, float t, float audioBoost, out vec3 colBG, out vec3 colStruct, out vec3 colPart) {
+            float beat = audioBoost * 0.5;
+            if (mode == 0) { 
+                 colBG = getRainbow(t + beat * 0.2, u_drift * 0.1);
+                 colStruct = vec3(0.2, 0.9, 1.0) + beat * 0.3; 
+                 colPart = getRainbow(t + 0.5 + beat * 0.3, 0.1);
+            } else if (mode == 1) { 
+                 colBG = mix(vec3(0.1, 0.0, 0.2), vec3(0.6, 0.0, 0.5), sin(t + beat)*0.5+0.5);
+                 colStruct = vec3(0.0, 0.9, 1.0) * (1.0 + beat);
+                 colPart = vec3(1.0, 0.2, 0.6) + beat * 0.5;
+            } else if (mode == 2) { 
+                 colBG = mix(vec3(0.2, 0.0, 0.0), vec3(0.5, 0.1, 0.0), sin(t*0.7 + beat)*0.5+0.5);
+                 colStruct = vec3(1.0, 0.5 + beat*0.5, 0.0); 
+                 colPart = vec3(1.0, 0.8, 0.2) * (1.0 + beat*2.0);
+            } else if (mode == 3) { 
+                 colBG = mix(vec3(0.0, 0.05, 0.2), vec3(0.0, 0.2, 0.4), sin(t*0.5 + beat*0.2)*0.5+0.5);
+                 colStruct = vec3(0.0, 0.7, 0.8) * (0.8 + beat*0.4);
+                 colPart = vec3(0.4, 1.0, 0.9) + beat;
+            } else { 
+                 colBG = mix(vec3(0.0, 0.2, 0.05), vec3(0.1, 0.4, 0.1), sin(t*0.6 + beat*0.3)*0.5+0.5);
+                 colStruct = vec3(0.2, 0.9, 0.3) * (1.0 + beat*0.5);
+                 colPart = vec3(0.7, 1.0, 0.2) + beat;
+            }
         }
 
         float particle(vec2 uv, vec2 offset, float scale, float z_pos) {
@@ -346,11 +419,10 @@
             float weightFade = smoothstep(0.0, 0.05, u_lineWeight);
 
             float rawGrid = max(gridX, gridY);
-            float structure = rawGrid * gridAlpha * weightFade * min(u_params.y, 1.5) * (1.0 + u_bass * 0.8);
-            structure += structure * lineNoise * 0.5; 
+            float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y, 1.5) * (1.0 + u_bass * 0.8);
+            structureIntensity += structureIntensity * lineNoise * 0.5; 
 
-            float particles = 0.0;
-            vec3 particleColorAccum = vec3(0.0);
+            float particleIntensity = 0.0;
             float particleGridScale = 6.0 + u_params.z * 10.0;
             vec2 pUV = uv * particleGridScale;
             vec2 id = floor(pUV);
@@ -361,36 +433,45 @@
                     vec2 neighbor = vec2(float(x), float(y));
                     vec2 neighborID = id + neighbor;
                     float n = hash(neighborID); 
+                    
                     float t = u_time * (0.8 + n * 0.5) + u_drift * n;
                     float x_freq = 2.0 + n * 3.0;
                     float y_freq = 2.0 + fract(n * 10.0) * 3.0;
-                    float shake = u_treble * u_react * 1.0;
+                    
+                    // FIX: Clamp position shake to avoid clipping at cell borders
+                    float shake = min(u_treble * u_react, 0.4);
+                    
                     float posX = sin(t * x_freq + n * 10.0) * (0.6 + shake);
                     float posY = cos(t * y_freq + n * 20.0) * (0.6 + shake);
                     float z_pos = sin(t * 1.5 + n * 5.0) * 1.5; 
+                    
                     vec2 pOffset = neighbor + vec2(posX, posY);
-                    float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * (1.0 + shake);
+                    
+                    // Compensate movement limit with larger size/glow
+                    float sizeBoost = 1.0 + shake * 2.0;
+                    float pSize = (0.1 + u_params.z * 0.2) * (0.5 + n) * sizeBoost;
+                    
                     float fade = smoothstep(2.0, -1.0, abs(z_pos));
-                    float pIntensity = particle(pUV, pOffset, pSize, z_pos) * fade;
-                    vec3 rainbowCol = getRainbow(n + u_time * 0.2 + u_bass * 0.1, u_drift * 0.2); 
-                    particleColorAccum += pIntensity * rainbowCol; 
-                    particles += pIntensity;
+                    particleIntensity += particle(pUV, pOffset, pSize, z_pos) * fade;
                 }
             }
-            particles *= min(u_params.z * 2.0, 1.2); 
+            particleIntensity *= min(u_params.z * 2.0, 1.2); 
 
-            vec3 bgRainbow = getRainbow(liquid * 0.5 + u_time * 0.05, u_drift * 0.1);
-            vec3 fullColor = (bgRainbow * (0.2 + liquid * 0.3)) + (vec3(0.2, 0.9, 1.0) * structure) + particleColorAccum;
+            vec3 themeBG, themeStruct, themePart;
+            getColorTheme(u_colorMode, liquid * 0.5 + u_time * 0.05, u_bass * u_react, themeBG, themeStruct, themePart);
+
+            vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) + (themeStruct * structureIntensity) + (themePart * particleIntensity);
+
             float luminance = dot(fullColor, vec3(0.299, 0.587, 0.114));
             vec3 monoColor = vec3(luminance) * 1.2; 
             monoColor = pow(monoColor, vec3(1.4));
 
             float volCurve = pow(u_vol * u_react, 1.5) * 3.0; 
-            float dynamicSat = u_paletteVal + (u_paletteVal * volCurve);
+            float dynamicSat = u_saturation + (u_saturation * volCurve * 0.3); 
             dynamicSat = clamp(dynamicSat, 0.0, 1.0);
 
             vec3 finalColor = mix(monoColor, fullColor, dynamicSat);
-            finalColor += vec3(pow(u_bass * u_react, 2.0) * 0.2 * dynamicSat); 
+            finalColor += vec3(pow(u_bass * u_react, 2.0) * 0.15 * dynamicSat); 
 
             finalColor = finalColor / (finalColor + vec3(1.0)); 
             finalColor = pow(finalColor, vec3(0.8)); 
@@ -400,20 +481,19 @@
 
     function reloadPage() { location.reload(); }
 
-    // --- KEYBOARD CONTROLS ---
     function keyPressed() {
         let changed = false;
         if (keyCode === RIGHT_ARROW) {
-            state.global.paletteVal = constrain(state.global.paletteVal + 0.05, 0, 1); changed = true;
+            state.global.saturation = constrain(state.global.saturation + 0.05, 0, 1); changed = true;
         } else if (keyCode === LEFT_ARROW) {
-            state.global.paletteVal = constrain(state.global.paletteVal - 0.05, 0, 1); changed = true;
+            state.global.saturation = constrain(state.global.saturation - 0.05, 0, 1); changed = true;
         } else if (keyCode === UP_ARROW) {
             state.global.react = constrain(state.global.react + 0.1, 0, 3); changed = true;
         } else if (keyCode === DOWN_ARROW) {
             state.global.react = constrain(state.global.react - 0.1, 0, 3); changed = true;
         }
         if (changed) {
-            updateSliderUI('colorshift', state.global.paletteVal);
+            updateSliderUI('saturationSlider', state.global.saturation);
             updateSliderUI('reactivity', state.global.react);
             return false;
         }
@@ -427,10 +507,15 @@
         }
     }
 
-    // --- Setup ---
+    window.toggleImgVisibility = () => {
+        state.global.imgVisible = !state.global.imgVisible;
+        const btn = document.getElementById('img-toggle-btn');
+        if(state.global.imgVisible) btn.classList.add('active');
+        else btn.classList.remove('active');
+    }
+
     function setup() {
         let cnv = createCanvas(windowWidth, windowHeight, WEBGL);
-        pixelDensity(1); 
         cnv.style('z-index', '1'); 
         cnv.id('defaultCanvas0');
         noStroke();
@@ -446,24 +531,33 @@
         const vC = document.getElementById('viz-canvas');
         vizCtx = vC.getContext('2d');
 
-        // ID Mappings for sliders
-        ['param1', 'colorshift', 'param3', 'gridSize', 'gridLine', 'param2', 'imgSizeParam', 'reactivity'].forEach((id) => {
+        const paletteSelect = document.getElementById('paletteSelect');
+        paletteSelect.addEventListener('change', (e) => {
+             state.global.colorMode = parseInt(e.target.value);
+        });
+
+        ['param1', 'saturationSlider', 'param3', 'gridSize', 'gridLine', 'param2', 'imgSizeParam', 'imgXParam', 'imgYParam', 'reactivity'].forEach((id) => {
             const el = document.getElementById(id);
             if(el) {
                 el.addEventListener('input', (e) => {
                     let val = parseFloat(e.target.value);
                     if(id === 'param1') state.params[0] = val; 
-                    else if(id === 'colorshift') state.global.paletteVal = val; 
+                    else if(id === 'saturationSlider') state.global.saturation = val; 
                     else if(id === 'param3') state.params[2] = val; 
                     else if(id === 'gridSize') state.global.gridSize = val; 
                     else if(id === 'gridLine') state.global.lineWeight = val; 
                     else if(id === 'param2') state.params[1] = val; 
                     else if(id === 'imgSizeParam') state.global.imgSize = val; 
+                    else if(id === 'imgXParam') state.global.imgX = val; 
+                    else if(id === 'imgYParam') state.global.imgY = val; 
                     else if(id === 'reactivity') state.global.react = val; 
                     e.target.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
                 });
             }
         });
+        
+        document.getElementById('paletteSelect').value = state.global.colorMode;
+        updateSliderUI('saturationSlider', state.global.saturation);
     }
 
     function initApp() {
@@ -515,9 +609,17 @@
         if (fileInput.files.length === 0) return;
         const file = fileInput.files[0];
         const blobUrl = URL.createObjectURL(file);
+        const status = document.getElementById('file-status');
+        status.innerText = "IMG LOADING...";
+        
         centerImg = loadImage(blobUrl, () => {
-            console.log("Image loaded");
+            console.log("Image loaded successfully");
+            status.innerText = "IMG LOADED";
+            setTimeout(()=> status.innerText="MIC MODE", 2000);
             URL.revokeObjectURL(blobUrl);
+        }, (err) => {
+            console.error("Img Error:", err);
+            status.innerText = "IMG ERROR";
         });
     }
 
@@ -569,7 +671,11 @@
         if (state.syncMode) {
             targetP[0] = state.params[0] + (pow(state.avgVol, 1.5) * 2.5); 
             targetP[1] = state.params[1] + (state.avgBass * 2.0 * state.global.react); 
-            targetP[2] = state.params[2] + (state.avgTreble * 2.0 * state.global.react); 
+            
+            // FIX: Clamp max particle param to 1.0 (User's request)
+            // Also using shader clamp logic for movement
+            targetP[2] = Math.min(1.0, state.params[2] + (state.avgTreble * 1.5 * state.global.react)); 
+            
             rotAccumulator += (0.0005 + state.avgVol * 0.05); 
         } else {
             targetP = [...state.params];
@@ -581,14 +687,15 @@
             state.dynamicParams[i] = constrain(state.dynamicParams[i], 0.0, 5.0); 
         }
         
-        // 1. Draw Shader Background
+        // 1. Draw Background
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
         myShader.setUniform('u_time', state.customTime);
         myShader.setUniform('u_drift', state.drift); 
         myShader.setUniform('u_params', state.dynamicParams);
         myShader.setUniform('u_react', state.global.react); 
-        myShader.setUniform('u_paletteVal', state.global.paletteVal); 
+        myShader.setUniform('u_saturation', state.global.saturation); 
+        myShader.setUniform('u_colorMode', state.global.colorMode); 
         myShader.setUniform('u_gridSize', state.global.gridSize); 
         myShader.setUniform('u_lineWeight', state.global.lineWeight); 
         myShader.setUniform('u_rot', rotAccumulator);
@@ -598,9 +705,18 @@
         myShader.setUniform('u_vol', state.avgVol);
         rect(-width/2, -height/2, width, height);
 
-        // 2. Draw Center Image (if loaded)
-        if (centerImg) {
+        // 2. Draw Image Plane (Force on top)
+        if (centerImg && state.global.imgVisible) {
             resetShader(); 
+            push();
+            let gl = this._renderer.GL;
+            gl.disable(gl.DEPTH_TEST);
+            
+            let offX = state.global.imgX * (width / 2); 
+            let offY = state.global.imgY * (height / 2); 
+            translate(offX, offY, 100); 
+            noLights(); 
+            
             let aspect = centerImg.width / centerImg.height;
             let baseScale = min(width, height) * 0.8; 
             let displayW, displayH;
@@ -613,8 +729,11 @@
                 displayW = displayH * aspect;
             }
 
-            imageMode(CENTER);
-            image(centerImg, 0, 0, displayW, displayH);
+            texture(centerImg);
+            noStroke();
+            plane(displayW, displayH);
+            gl.enable(gl.DEPTH_TEST);
+            pop();
         }
     }
 
