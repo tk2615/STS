@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ Final Edition</title>
+    <title>Aether VJ v10.1 Keyboard Shortcuts</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -79,6 +79,7 @@
             bottom: 100px;
             width: 520px;
             
+            /* TRANSPARENT BACKGROUND */
             background: rgba(10, 10, 10, 0.6); 
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
@@ -170,6 +171,7 @@
         /* --- BOTTOM BAR (GLASS) --- */
         .bottom-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
+            /* TRANSPARENT BACKGROUND */
             background: rgba(10, 10, 10, 0.6); 
             border-top: 1px solid rgba(255,255,255,0.15);
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
@@ -450,7 +452,7 @@
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">▶</button>
     </div>
 </div>
-<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | ENTER=UI | ARROWS=FX</div>
+<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | ENTER=UI | ARROWS=FX | Z=PARTICLE | X=GRID | C=BORDER</div>
 
 <script>
     const MAX_FILE_SIZE = 20 * 1024 * 1024; 
@@ -488,6 +490,8 @@
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0, drift: 0, paletteTime: 0
     };
+    
+    let activeSlider = null;
 
     let myShader, fft, amplitude, mic;
     let soundFile = null;
@@ -725,6 +729,12 @@
             return false; 
         } else if (keyCode === ENTER) {
             toggleUI();
+        } else if (key === 'z' || key === 'Z') {
+            toggleParticles();
+        } else if (key === 'x' || key === 'X') {
+            toggleGrid();
+        } else if (key === 'c' || key === 'C') {
+            toggleBorder();
         }
 
         if (changed) {
@@ -734,6 +744,7 @@
         }
     }
 
+    // --- TOGGLES ---
     window.toggleGrid = () => {
         state.global.gridVisible = !state.global.gridVisible;
         const btn = document.getElementById('grid-toggle-btn');
@@ -904,8 +915,15 @@
         controls.forEach((id) => {
             const el = document.getElementById(id);
             if(el) {
+                // Track active slider
+                el.addEventListener('mousedown', () => activeSlider = id);
+                el.addEventListener('touchstart', () => activeSlider = id);
+                el.addEventListener('mouseup', () => activeSlider = null);
+                el.addEventListener('touchend', () => activeSlider = null);
+
                 el.addEventListener('input', (e) => {
                     let val = parseFloat(e.target.value);
+                    // --- MAPPING ---
                     if(id === 'param1') state.params[0] = val; 
                     else if(id === 'saturationSlider') state.global.saturation = val; 
                     else if(id === 'reactivity') state.global.react = val;
@@ -1162,6 +1180,13 @@
                 targetBorder.alpha = Math.min(1.0, state.global.borderAlpha + (state.avgTreble * 0.2));
                 targetBorder.distortion = state.global.borderDistortion + (state.avgBass * state.global.react);
             }
+            
+            // --- ALIVE UI UPDATES ---
+            if(activeSlider !== 'param1') updateSliderUI('param1', targetP[0]);
+            if(activeSlider !== 'param2') updateSliderUI('param2', targetP[1]);
+            if(activeSlider !== 'param3') updateSliderUI('param3', targetP[2]);
+            if(activeSlider !== 'borderDistortion') updateSliderUI('borderDistortion', targetBorder.distortion);
+
         } else {
             targetP = [...state.params];
             rotAccumulator += 0.0005;
