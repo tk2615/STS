@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v10.1 Keyboard Shortcuts</title>
+    <title>Aether VJ v10.2 Clean Layout</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -30,25 +30,12 @@
             padding: 20px;
         }
 
-        .header { 
-            display: flex; align-items: flex-start; justify-content: space-between; 
-            pointer-events: auto; margin-bottom: 10px; 
-        }
-        .title-group { display: flex; flex-direction: column; gap: 8px; }
-        .title-row { display: flex; align-items: center; gap: 15px; }
-        
-        .reload-btn {
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-            color: #fff; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 10px;
-            transition: all 0.2s;
-        }
-        .reload-btn:hover { background: rgba(255,255,255,0.3); }
-
-        /* Sync Switch */
+        /* Sync Switch (Floating Top Left) */
         .sync-switch {
+            position: absolute; top: 20px; left: 20px; pointer-events: auto;
             display: inline-flex; align-items: center; gap: 8px; width: fit-content;
-            background: rgba(255,255,255,0.05); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px); pointer-events: auto;
+            background: rgba(10,10,10,0.6); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(10px);
         }
         .sync-switch:hover { background: rgba(255,255,255,0.1); }
         .sync-switch.active { background: rgba(0, 255, 255, 0.15); border-color: rgba(0, 255, 255, 0.5); box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
@@ -57,6 +44,65 @@
         .switch-label { font-size: 10px; letter-spacing: 1px; color: #777; font-weight: 700; }
         .sync-switch.active .switch-label { color: #fff; }
         @keyframes pulse-beat { 0% { opacity: 0.5; transform: scale(1.0); } 100% { opacity: 1.0; transform: scale(1.2); } }
+
+        /* --- CONTROLS PANEL (GLASS) --- */
+        .controls-panel {
+            pointer-events: auto;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            bottom: 100px;
+            width: 520px;
+            
+            background: rgba(10, 10, 10, 0.6); 
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+            padding: 0; /* Padding handled inside for scrollbar aesthetics */
+            
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 101;
+            
+            display: flex;
+            flex-direction: column;
+        }
+        .controls-panel.hidden { transform: translateX(120%); opacity: 0; pointer-events: none; }
+
+        /* Panel Header with Close Button */
+        .panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.02);
+        }
+        .panel-title { font-size: 12px; font-weight: bold; color: #fff; letter-spacing: 1px; }
+        .panel-close-btn {
+            cursor: pointer; color: #888; font-size: 16px; transition: 0.2s;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; border: 1px solid transparent;
+        }
+        .panel-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
+
+        /* Panel Content Scrollable Area */
+        .panel-content {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            scrollbar-width: thin; scrollbar-color: #444 rgba(0,0,0,0.3);
+        }
+        .panel-content::-webkit-scrollbar { width: 4px; }
+        .panel-content::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+        /* Floating Open Button (Visible when panel is hidden) */
+        .open-btn-fixed {
+            position: fixed; top: 20px; right: 20px; z-index: 100; pointer-events: auto;
+            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; border: 1px solid rgba(255,255,255,0.1); color: #fff;
+            backdrop-filter: blur(10px); transition: all 0.3s; font-size: 18px; background: rgba(10,10,10,0.6);
+            opacity: 0; pointer-events: none; transform: scale(0.8);
+        }
+        .controls-panel.hidden ~ .open-btn-fixed { opacity: 1; pointer-events: auto; transform: scale(1.0); }
+        .open-btn-fixed:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); box-shadow: 0 0 15px rgba(255,255,255,0.1); }
 
         /* Mini Switch */
         .mini-switch {
@@ -70,44 +116,14 @@
         }
         .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
 
-        /* --- CONTROLS PANEL (GLASS) --- */
-        .controls-panel {
-            pointer-events: auto;
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            bottom: 100px;
-            width: 520px;
-            
-            /* TRANSPARENT BACKGROUND */
-            background: rgba(10, 10, 10, 0.6); 
-            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-            border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-            padding: 20px; 
-            
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-            z-index: 101;
-            
-            overflow-y: auto;
-            scrollbar-width: thin; scrollbar-color: #444 rgba(0,0,0,0.3);
-            
-            display: flex;
-            flex-direction: column;
-        }
-        .controls-panel.hidden { transform: translateX(120%); opacity: 0; pointer-events: none; }
-        .controls-panel::-webkit-scrollbar { width: 4px; }
-        .controls-panel::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
-
         .panel-grid {
             display: grid;
             grid-template-columns: 1fr 1fr; 
             gap: 25px; 
-            flex: 1;
         }
 
         #viz-canvas {
-            width: 100%; height: 30px; background: rgba(0,0,0,0.3);
+            width: 100%; height: 40px; background: rgba(0,0,0,0.3);
             border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;
             border-radius: 2px; display: block; flex-shrink: 0;
         }
@@ -160,18 +176,9 @@
         }
         .small-btn:hover { background: rgba(255,255,255,0.2); border-color: #0ff; }
 
-        .toggle-btn-fixed {
-            position: fixed; top: 25px; right: 25px; z-index: 200; pointer-events: auto;
-            width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            cursor: pointer; border: 1px solid rgba(255,255,255,0.1); color: #888;
-            backdrop-filter: blur(10px); transition: all 0.3s; font-size: 14px; background: rgba(255,255,255,0.05);
-        }
-        .toggle-btn-fixed:hover { background: rgba(255,255,255,0.2); color: #fff; border-color: rgba(255,255,255,0.3); }
-
         /* --- BOTTOM BAR (GLASS) --- */
         .bottom-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            /* TRANSPARENT BACKGROUND */
             background: rgba(10, 10, 10, 0.6); 
             border-top: 1px solid rgba(255,255,255,0.15);
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
@@ -241,196 +248,197 @@
     <div class="sub-text">START</div>
 </div>
 
-<div class="toggle-btn-fixed" onclick="toggleUI()">✕</div>
+<div class="open-btn-fixed" onclick="toggleUI()">☰</div>
 
 <div id="yt-wrapper">
     <div id="yt-player"></div>
 </div>
 
 <div id="ui-container">
-    <div class="header">
-        <div class="title-group">
-            <div class="title-row">
-                <h1>Aether VJ</h1>
-                <button class="reload-btn" onclick="reloadPage()">↻ RELOAD</button>
-            </div>
-            <div class="sync-switch" id="sync-btn" onclick="toggleSync()">
-                <div class="indicator"></div>
-                <div class="switch-label">AUDIO SYNC: OFF</div>
-            </div>
-        </div>
+    <div class="sync-switch" id="sync-btn" onclick="toggleSync()">
+        <div class="indicator"></div>
+        <div class="switch-label">AUDIO SYNC: OFF</div>
     </div>
 
     <div class="controls-panel" id="ctrl-panel">
-        <canvas id="viz-canvas" width="480" height="30"></canvas>
-
-        <div class="panel-grid">
-            <div class="col-left">
-                <div class="section-title">GLOBAL</div>
-                <div class="slider-group" id="grp-1">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Flow (Speed)</label> <span class="value" id="val-1">0.5</span></div>
-                    <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
-                </div>
-                <div class="slider-group">
-                    <div class="label-row"><label>Reactivity (Audio)</label> <span class="value" id="val-react">1.5</span></div>
-                    <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
-                </div>
-                <div class="slider-group" style="margin-bottom: 12px;">
-                    <div class="label-row"><label id="paletteLabel">Color Palette</label></div>
-                    <select id="paletteSelect">
-                        <option value="0">Rainbow (Classic)</option>
-                        <option value="1">Cyberpunk (Pk/Cy)</option>
-                        <option value="2">Heatwave (Rd/Or)</option>
-                        <option value="3">Deep Ocean (Bl/Aq)</option>
-                        <option value="4">Forest Neon (Gr/Li)</option>
-                    </select>
-                </div>
-                <div class="slider-group" id="grp-saturation">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Saturation</label> <span class="value" id="val-saturation">0.8</span></div>
-                    <input type="range" id="saturationSlider" min="0" max="1" step="0.01" value="0.8">
-                </div>
-
-                <div class="section-title section-spacer">
-                    GRID SYSTEM
-                    <div class="mini-switch active" id="grid-toggle-btn" onclick="toggleGrid()">
-                        <div class="mini-indicator"></div>
-                    </div>
-                </div>
-                <div class="slider-group" id="grp-grid-size">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Grid Zoom</label> <span class="value" id="val-grid-size">0.5</span></div>
-                    <input type="range" id="gridSize" min="0" max="1" step="0.01" value="0.5">
-                </div>
-                <div class="slider-group" id="grp-grid-line">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Line Weight</label> <span class="value" id="val-grid-line">0.3</span></div>
-                    <input type="range" id="gridLine" min="0" max="1" step="0.01" value="0.3">
-                </div>
-                <div class="slider-group" id="grp-2">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Distortion</label> <span class="value" id="val-2">0.3</span></div>
-                    <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
-                </div>
-                <div class="slider-group" id="grp-3">
-                    <div class="sync-dot"></div>
-                    <div class="label-row">
-                        <label>Particles
-                            <div class="mini-switch active" id="part-toggle-btn" onclick="toggleParticles()">
-                                <div class="mini-indicator" style="width:8px; height:8px; top:2px; left:2px;"></div>
-                            </div>
-                        </label> 
-                        <span class="value" id="val-3">0.4</span>
-                    </div>
-                    <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
-                </div>
+        <div class="panel-header">
+            <div class="panel-title">AETHER VJ CONTROL</div>
+            <div class="panel-close-btn" onclick="toggleUI()">✕</div>
+        </div>
+        
+        <div class="panel-content">
+            <canvas id="viz-canvas" width="480" height="40"></canvas>
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                 <button class="small-btn" style="flex:0 0 auto; width:100%;" onclick="reloadPage()">↻ RELOAD APP</button>
             </div>
 
-            <div class="col-right">
-                <div class="section-title">
-                    BORDER FX
-                    <div class="mini-switch active" id="border-toggle-btn" onclick="toggleBorder()">
-                        <div class="mini-indicator"></div>
+            <div class="panel-grid">
+                <div class="col-left">
+                    <div class="section-title">GLOBAL</div>
+                    <div class="slider-group" id="grp-1">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Flow (Speed)</label> <span class="value" id="val-1">0.5</span></div>
+                        <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
                     </div>
-                </div>
-                <div class="slider-group" id="grp-border-width">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Width</label> <span class="value" id="val-border-width">0.0</span></div>
-                    <input type="range" id="borderWidth" min="0" max="0.5" step="0.01" value="0.0">
-                </div>
-                <div class="slider-group" id="grp-border-density">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Density</label> <span class="value" id="val-border-density">5.0</span></div>
-                    <input type="range" id="borderDensity" min="1" max="20" step="0.1" value="5.0">
-                </div>
-                <div class="slider-group" id="grp-border-distortion">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Distortion</label> <span class="value" id="val-border-distortion">0.5</span></div>
-                    <input type="range" id="borderDistortion" min="0" max="1" step="0.01" value="0.5">
-                </div>
-                <div class="slider-group" id="grp-border-alpha">
-                    <div class="sync-dot"></div>
-                    <div class="label-row"><label>Alpha</label> <span class="value" id="val-border-alpha">0.8</span></div>
-                    <input type="range" id="borderAlpha" min="0" max="1" step="0.01" value="0.8">
-                </div>
+                    <div class="slider-group">
+                        <div class="label-row"><label>Reactivity (Audio)</label> <span class="value" id="val-react">1.5</span></div>
+                        <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
+                    </div>
+                    <div class="slider-group" style="margin-bottom: 12px;">
+                        <div class="label-row"><label id="paletteLabel">Color Palette</label></div>
+                        <select id="paletteSelect">
+                            <option value="0">Rainbow (Classic)</option>
+                            <option value="1">Cyberpunk (Pk/Cy)</option>
+                            <option value="2">Heatwave (Rd/Or)</option>
+                            <option value="3">Deep Ocean (Bl/Aq)</option>
+                            <option value="4">Forest Neon (Gr/Li)</option>
+                        </select>
+                    </div>
+                    <div class="slider-group" id="grp-saturation">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Saturation</label> <span class="value" id="val-saturation">0.8</span></div>
+                        <input type="range" id="saturationSlider" min="0" max="1" step="0.01" value="0.8">
+                    </div>
 
-                <div class="section-title section-spacer">LAYERS (YT & IMG)</div>
-                
-                <div class="slider-group" style="margin-bottom:8px;">
-                    <input type="text" id="yt-url" placeholder="YouTube ID/URL">
-                    <div class="btn-row">
-                        <button class="small-btn" id="yt-load-btn" onclick="loadYouTube()">LOAD & PLAY</button>
-                        <button class="small-btn" onclick="clearYouTube()">CLEAR</button>
-                    </div>
-                    <div style="display:flex; justify-content: space-between; gap: 10px;">
-                        <div style="display:flex; justify-content: space-between; align-items: center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; flex:1;">
-                            <label style="margin:0; font-size:9px;">INTERACT</label>
-                            <div class="mini-switch" id="yt-interact-btn" onclick="toggleYTInteract()" title="Click Interact">
-                                <div class="mini-indicator"></div>
-                            </div>
-                        </div>
-                        <div style="display:flex; justify-content: space-between; align-items: center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; flex:1;">
-                            <label style="margin:0; font-size:9px;">MUTE</label>
-                            <div class="mini-switch" id="yt-mute-btn" onclick="toggleYTMute()" title="Mute Toggle">
-                                <div class="mini-indicator"></div>
-                            </div>
+                    <div class="section-title section-spacer">
+                        GRID SYSTEM
+                        <div class="mini-switch active" id="grid-toggle-btn" onclick="toggleGrid()">
+                            <div class="mini-indicator"></div>
                         </div>
                     </div>
-                </div>
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="slider-group">
-                        <div class="label-row"><label>YT Size</label> <span class="value" id="val-yt-size">0.5</span></div>
-                        <input type="range" id="ytSize" min="0.1" max="1.5" step="0.01" value="0.5">
+                    <div class="slider-group" id="grp-grid-size">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Grid Zoom</label> <span class="value" id="val-grid-size">0.5</span></div>
+                        <input type="range" id="gridSize" min="0" max="1" step="0.01" value="0.5">
                     </div>
-                    <div class="slider-group">
-                        <div class="label-row"><label>YT Opacity</label> <span class="value" id="val-yt-opacity">0.5</span></div>
-                        <input type="range" id="ytOpacity" min="0" max="1" step="0.01" value="0.5">
+                    <div class="slider-group" id="grp-grid-line">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Line Weight</label> <span class="value" id="val-grid-line">0.3</span></div>
+                        <input type="range" id="gridLine" min="0" max="1" step="0.01" value="0.3">
                     </div>
-                </div>
-                <div class="slider-group">
-                    <div class="label-row"><label>YT Pos X / Y</label></div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="range" id="ytXParam" min="-1" max="1" step="0.01" value="0.0">
-                        <input type="range" id="ytYParam" min="-1" max="1" step="0.01" value="0.0">
+                    <div class="slider-group" id="grp-2">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Distortion</label> <span class="value" id="val-2">0.3</span></div>
+                        <input type="range" id="param2" min="0" max="1" step="0.01" value="0.3">
                     </div>
-                </div>
-                <div class="slider-group">
-                    <select id="ytBlend" style="margin-top:5px;">
-                        <option value="normal">Normal</option>
-                        <option value="screen">Screen (Add)</option>
-                        <option value="overlay">Overlay</option>
-                        <option value="difference">Difference</option>
-                        <option value="multiply">Multiply</option>
-                    </select>
-                </div>
-
-                <div class="slider-group" style="display:flex; justify-content: space-between; align-items: center; margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                    <label style="margin:0;">IMAGE LAYER</label>
-                    <div class="mini-switch active" id="img-toggle-btn" onclick="toggleImgVisibility()">
-                        <div class="mini-indicator"></div>
-                    </div>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-                    <div class="slider-group">
-                        <div class="label-row"><label>Size</label> <span class="value" id="val-img-size">0.5</span></div>
-                        <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
-                    </div>
-                    <div class="slider-group">
-                        <div class="label-row"><label>Opacity</label> <span class="value" id="val-img-opacity">1.0</span></div>
-                        <input type="range" id="imgOpacityParam" min="0" max="1" step="0.01" value="1.0">
-                    </div>
-                </div>
-                <div class="slider-group">
-                    <div class="label-row"><label>Img Pos X / Y</label></div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="range" id="imgXParam" min="-1" max="1" step="0.01" value="0.0">
-                        <input type="range" id="imgYParam" min="-1" max="1" step="0.01" value="0.0">
+                    <div class="slider-group" id="grp-3">
+                        <div class="sync-dot"></div>
+                        <div class="label-row">
+                            <label>Particles
+                                <div class="mini-switch active" id="part-toggle-btn" onclick="toggleParticles()">
+                                    <div class="mini-indicator" style="width:8px; height:8px; top:2px; left:2px;"></div>
+                                </div>
+                            </label> 
+                            <span class="value" id="val-3">0.4</span>
+                        </div>
+                        <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
                     </div>
                 </div>
 
-            </div> </div> </div>
+                <div class="col-right">
+                    <div class="section-title">
+                        BORDER FX
+                        <div class="mini-switch active" id="border-toggle-btn" onclick="toggleBorder()">
+                            <div class="mini-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="slider-group" id="grp-border-width">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Width</label> <span class="value" id="val-border-width">0.0</span></div>
+                        <input type="range" id="borderWidth" min="0" max="0.5" step="0.01" value="0.0">
+                    </div>
+                    <div class="slider-group" id="grp-border-density">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Density</label> <span class="value" id="val-border-density">5.0</span></div>
+                        <input type="range" id="borderDensity" min="1" max="20" step="0.1" value="5.0">
+                    </div>
+                    <div class="slider-group" id="grp-border-distortion">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Distortion</label> <span class="value" id="val-border-distortion">0.5</span></div>
+                        <input type="range" id="borderDistortion" min="0" max="1" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group" id="grp-border-alpha">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Alpha</label> <span class="value" id="val-border-alpha">0.8</span></div>
+                        <input type="range" id="borderAlpha" min="0" max="1" step="0.01" value="0.8">
+                    </div>
+
+                    <div class="section-title section-spacer">LAYERS (YT & IMG)</div>
+                    
+                    <div class="slider-group" style="margin-bottom:8px;">
+                        <input type="text" id="yt-url" placeholder="YouTube ID/URL">
+                        <div class="btn-row">
+                            <button class="small-btn" id="yt-load-btn" onclick="loadYouTube()">LOAD & PLAY</button>
+                            <button class="small-btn" onclick="clearYouTube()">CLEAR</button>
+                        </div>
+                        <div style="display:flex; justify-content: space-between; gap: 10px;">
+                            <div style="display:flex; justify-content: space-between; align-items: center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; flex:1;">
+                                <label style="margin:0; font-size:9px;">INTERACT</label>
+                                <div class="mini-switch" id="yt-interact-btn" onclick="toggleYTInteract()" title="Click Interact">
+                                    <div class="mini-indicator"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex; justify-content: space-between; align-items: center; background:rgba(255,255,255,0.05); padding:4px 8px; border-radius:4px; flex:1;">
+                                <label style="margin:0; font-size:9px;">MUTE</label>
+                                <div class="mini-switch" id="yt-mute-btn" onclick="toggleYTMute()" title="Mute Toggle">
+                                    <div class="mini-indicator"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="slider-group">
+                            <div class="label-row"><label>YT Size</label> <span class="value" id="val-yt-size">0.5</span></div>
+                            <input type="range" id="ytSize" min="0.1" max="1.5" step="0.01" value="0.5">
+                        </div>
+                        <div class="slider-group">
+                            <div class="label-row"><label>YT Opacity</label> <span class="value" id="val-yt-opacity">0.5</span></div>
+                            <input type="range" id="ytOpacity" min="0" max="1" step="0.01" value="0.5">
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="label-row"><label>YT Pos X / Y</label></div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="range" id="ytXParam" min="-1" max="1" step="0.01" value="0.0">
+                            <input type="range" id="ytYParam" min="-1" max="1" step="0.01" value="0.0">
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <select id="ytBlend" style="margin-top:5px;">
+                            <option value="normal">Normal</option>
+                            <option value="screen">Screen (Add)</option>
+                            <option value="overlay">Overlay</option>
+                            <option value="difference">Difference</option>
+                            <option value="multiply">Multiply</option>
+                        </select>
+                    </div>
+
+                    <div class="slider-group" style="display:flex; justify-content: space-between; align-items: center; margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
+                        <label style="margin:0;">IMAGE LAYER</label>
+                        <div class="mini-switch active" id="img-toggle-btn" onclick="toggleImgVisibility()">
+                            <div class="mini-indicator"></div>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                        <div class="slider-group">
+                            <div class="label-row"><label>Size</label> <span class="value" id="val-img-size">0.5</span></div>
+                            <input type="range" id="imgSizeParam" min="0" max="2" step="0.01" value="0.5">
+                        </div>
+                        <div class="slider-group">
+                            <div class="label-row"><label>Opacity</label> <span class="value" id="val-img-opacity">1.0</span></div>
+                            <input type="range" id="imgOpacityParam" min="0" max="1" step="0.01" value="1.0">
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="label-row"><label>Img Pos X / Y</label></div>
+                        <div style="display:flex; gap:10px;">
+                            <input type="range" id="imgXParam" min="-1" max="1" step="0.01" value="0.0">
+                            <input type="range" id="imgYParam" min="-1" max="1" step="0.01" value="0.0">
+                        </div>
+                    </div>
+
+                </div> </div> </div> </div>
 </div>
 
 <div class="bottom-bar" id="btm-bar">
@@ -814,7 +822,6 @@
         };
 
         const onPlayerReady = (event) => {
-            // 2-step force play
             event.target.mute();
             event.target.playVideo();
             setTimeout(() => {
@@ -836,7 +843,7 @@
                 height: '100%', width: '100%',
                 videoId: vidId,
                 playerVars: { 
-                    'autoplay': 1, 'controls': 0, 'mute': 1, // Init mute for autoplay
+                    'autoplay': 1, 'controls': 0, 'mute': 1, 
                     'loop': 1, 'playlist': vidId,
                     'origin': window.location.origin
                 },
@@ -1126,6 +1133,7 @@
         let vol = amplitude.getLevel();
 
         if (!state.uiHidden) {
+            // Update viz to match new larger width
             const w = vizCtx.canvas.width;
             const h = vizCtx.canvas.height;
             vizCtx.clearRect(0, 0, w, h);
