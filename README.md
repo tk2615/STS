@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aether VJ v11.0 Smooth Criminal</title>
+    <title>Aether VJ v13.0 Hattori Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
     <style>
@@ -30,7 +30,7 @@
             padding: 20px;
         }
 
-        /* Sync Switch (Floating Top Left) */
+        /* Sync Switch */
         .sync-switch {
             position: absolute; top: 20px; left: 20px; pointer-events: auto;
             display: inline-flex; align-items: center; gap: 8px; width: fit-content;
@@ -39,7 +39,6 @@
             opacity: 1; transform: translateY(0);
         }
         .sync-switch.hidden { opacity: 0; pointer-events: none; transform: translateY(-20px); }
-        
         .sync-switch:hover { background: rgba(255,255,255,0.1); }
         .sync-switch.active { background: rgba(0, 255, 255, 0.15); border-color: rgba(0, 255, 255, 0.5); box-shadow: 0 0 15px rgba(0, 255, 255, 0.2); }
         .indicator { width: 8px; height: 8px; border-radius: 50%; background: #444; transition: all 0.3s; }
@@ -60,41 +59,45 @@
         }
         .mini-switch.active .mini-indicator { transform: translateX(14px); background: #0ff; box-shadow: 0 0 5px #0ff; }
 
-        /* --- CONTROLS PANEL (GLASS) --- */
+        /* --- CONTROLS PANEL (Optimized Layout) --- */
         .controls-panel {
             pointer-events: auto;
             position: absolute;
             top: 20px;
             right: 20px;
             bottom: 100px;
-            width: 520px;
+            width: 520px; /* Slightly wider for better balance */
+            
             background: rgba(10, 10, 10, 0.6); 
             backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
             border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
             padding: 0;
+            
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s;
             box-shadow: 0 10px 40px rgba(0,0,0,0.5);
             z-index: 101;
-            display: flex; flex-direction: column;
+            
+            display: flex;
+            flex-direction: column;
         }
         .controls-panel.hidden { transform: translateX(120%); opacity: 0; pointer-events: none; }
 
         .panel-header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 20px;
+            padding: 12px 15px;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             background: rgba(255,255,255,0.02);
         }
-        .panel-title { font-size: 12px; font-weight: bold; color: #fff; letter-spacing: 1px; }
+        .panel-title { font-size: 11px; font-weight: bold; color: #fff; letter-spacing: 1px; }
         .panel-close-btn {
-            cursor: pointer; color: #888; font-size: 16px; transition: 0.2s;
-            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #888; font-size: 14px; transition: 0.2s;
+            width: 20px; height: 20px; display: flex; align-items: center; justify-content: center;
             border-radius: 50%; border: 1px solid transparent;
         }
         .panel-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 
         .panel-content {
-            padding: 20px;
+            padding: 15px;
             overflow-y: auto;
             flex: 1;
             scrollbar-width: thin; scrollbar-color: #444 rgba(0,0,0,0.3);
@@ -125,18 +128,18 @@
         }
 
         .section-title {
-            font-size: 11px; color: #0ff; font-weight: bold; letter-spacing: 1px;
-            margin: 0 0 10px 0; padding-bottom: 6px;
+            font-size: 10px; color: #0ff; font-weight: bold; letter-spacing: 1px;
+            margin: 0 0 8px 0; padding-bottom: 4px;
             border-bottom: 1px solid rgba(0,255,255,0.3);
             text-transform: uppercase; 
             display: flex; justify-content: space-between; align-items: center;
         }
-        .section-spacer { margin-top: 18px; }
+        .section-spacer { margin-top: 20px; }
 
-        .slider-group { margin-bottom: 12px; position: relative; }
-        .label-row { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center; }
-        label { font-size: 10px; color: #ccc; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.8); display:flex; align-items:center; gap:8px; }
-        .value { font-size: 10px; font-family: 'Courier New', monospace; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        .slider-group { margin-bottom: 10px; position: relative; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 3px; align-items: center; }
+        label { font-size: 9px; color: #ccc; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; text-shadow: 0 1px 2px rgba(0,0,0,0.8); display:flex; align-items:center; gap:6px; }
+        .value { font-size: 9px; font-family: 'Courier New', monospace; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         
         .sync-dot {
             position: absolute; right: -8px; top: 2px; width: 4px; height: 4px; background: #0ff; border-radius: 50%;
@@ -157,17 +160,17 @@
 
         select, input[type=text] {
             width: 100%; background: rgba(0,0,0,0.4); color: #0ff; border: 1px solid rgba(0,255,255,0.3);
-            padding: 6px; font-size: 11px; border-radius: 4px; outline: none; cursor: pointer;
+            padding: 4px; font-size: 10px; border-radius: 4px; outline: none; cursor: pointer;
             font-family: 'Courier New', monospace; text-transform: uppercase;
         }
         select option { background: #111; color: #ccc; }
         input[type=text] { cursor: text; margin-bottom: 8px; color: #fff; }
         input[type=text]::placeholder { color: #aaa; }
 
-        .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn-row { display: flex; gap: 5px; margin-bottom: 10px; }
         .small-btn {
             background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff;
-            padding: 6px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; flex: 1;
+            padding: 4px 8px; border-radius: 4px; font-size: 9px; cursor: pointer; flex: 1;
             text-transform: uppercase; transition: 0.2s;
         }
         .small-btn:hover { background: rgba(255,255,255,0.2); border-color: #0ff; }
@@ -240,7 +243,7 @@
 
 <div id="overlay" onclick="initApp()">
     <div class="start-text">AETHER VJ</div>
-    <div class="sub-text">START</div>
+    <div class="sub-text" id="start-sub">START</div>
 </div>
 
 <div class="open-btn-fixed" onclick="toggleUI()">☰</div>
@@ -262,7 +265,7 @@
         </div>
         
         <div class="panel-content">
-            <canvas id="viz-canvas" width="480" height="40"></canvas>
+            <canvas id="viz-canvas" width="420" height="30"></canvas>
             <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
                  <button class="small-btn" style="flex:0 0 auto; width:100%;" onclick="reloadPage()">↻ RELOAD APP</button>
             </div>
@@ -276,7 +279,7 @@
                         <input type="range" id="param1" min="0" max="1" step="0.01" value="0.5">
                     </div>
                     <div class="slider-group">
-                        <div class="label-row"><label>Reactivity (Audio)</label> <span class="value" id="val-react">1.5</span></div>
+                        <div class="label-row"><label>Reactivity</label> <span class="value" id="val-react">1.5</span></div>
                         <input type="range" id="reactivity" min="0" max="3" step="0.1" value="1.5">
                     </div>
                     <div class="slider-group" style="margin-bottom: 12px;">
@@ -296,8 +299,8 @@
                     </div>
 
                     <div class="section-title section-spacer">
-                        GRID SYSTEM
-                        <div class="mini-switch active" id="grid-toggle-btn" onclick="toggleGrid()">
+                        GRID SYSTEM (KEY: X)
+                        <div class="mini-switch" id="grid-toggle-btn" onclick="toggleGrid()">
                             <div class="mini-indicator"></div>
                         </div>
                     </div>
@@ -319,8 +322,8 @@
                     <div class="slider-group" id="grp-3">
                         <div class="sync-dot"></div>
                         <div class="label-row">
-                            <label>Particles
-                                <div class="mini-switch active" id="part-toggle-btn" onclick="toggleParticles()">
+                            <label>Particles (KEY: Z)
+                                <div class="mini-switch" id="part-toggle-btn" onclick="toggleParticles()">
                                     <div class="mini-indicator" style="width:8px; height:8px; top:2px; left:2px;"></div>
                                 </div>
                             </label> 
@@ -328,12 +331,10 @@
                         </div>
                         <input type="range" id="param3" min="0" max="1" step="0.01" value="0.4">
                     </div>
-                </div>
 
-                <div class="col-right">
-                    <div class="section-title">
-                        BORDER FX
-                        <div class="mini-switch active" id="border-toggle-btn" onclick="toggleBorder()">
+                    <div class="section-title section-spacer">
+                        BORDER FX (KEY: C)
+                        <div class="mini-switch" id="border-toggle-btn" onclick="toggleBorder()">
                             <div class="mini-indicator"></div>
                         </div>
                     </div>
@@ -356,6 +357,63 @@
                         <div class="sync-dot"></div>
                         <div class="label-row"><label>Alpha</label> <span class="value" id="val-border-alpha">0.8</span></div>
                         <input type="range" id="borderAlpha" min="0" max="1" step="0.01" value="0.8">
+                    </div>
+                </div>
+
+                <div class="col-right">
+                    
+                    <div class="section-title">
+                        TRIANGLE FX (KEY: A)
+                        <div class="mini-switch" id="tri-toggle-btn" onclick="toggleTriangles()">
+                            <div class="mini-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Size</label> <span class="value" id="val-tri-size">0.5</span></div>
+                        <input type="range" id="triSize" min="0.1" max="2.0" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Density</label> <span class="value" id="val-tri-density">5.0</span></div>
+                        <input type="range" id="triDensity" min="1.0" max="20.0" step="0.1" value="5.0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Distortion</label> <span class="value" id="val-tri-dist">0.5</span></div>
+                        <input type="range" id="triDist" min="0.0" max="1.0" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Alpha</label> <span class="value" id="val-tri-alpha">0.8</span></div>
+                        <input type="range" id="triAlpha" min="0.0" max="1.0" step="0.01" value="0.8">
+                    </div>
+
+                    <div class="section-title section-spacer">
+                        CIRCLE FX (KEY: S)
+                        <div class="mini-switch" id="circ-toggle-btn" onclick="toggleCircles()">
+                            <div class="mini-indicator"></div>
+                        </div>
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Size</label> <span class="value" id="val-circ-size">0.5</span></div>
+                        <input type="range" id="circSize" min="0.1" max="2.0" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Density</label> <span class="value" id="val-circ-density">5.0</span></div>
+                        <input type="range" id="circDensity" min="1.0" max="20.0" step="0.1" value="5.0">
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Distortion</label> <span class="value" id="val-circ-dist">0.5</span></div>
+                        <input type="range" id="circDist" min="0.0" max="1.0" step="0.01" value="0.5">
+                    </div>
+                    <div class="slider-group">
+                        <div class="sync-dot"></div>
+                        <div class="label-row"><label>Alpha</label> <span class="value" id="val-circ-alpha">0.8</span></div>
+                        <input type="range" id="circAlpha" min="0.0" max="1.0" step="0.01" value="0.8">
                     </div>
 
                     <div class="section-title section-spacer">LAYERS (YT & IMG)</div>
@@ -410,7 +468,12 @@
                     </div>
 
                     <div class="slider-group" style="display:flex; justify-content: space-between; align-items: center; margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:10px;">
-                        <label style="margin:0;">IMAGE LAYER</label>
+                        <label style="margin:0;">
+                            IMAGE LAYER (SYNC: V)
+                            <div class="mini-switch" id="img-sync-btn" onclick="toggleImgSync()" title="Sync Image Effects" style="display:inline-block; margin-left:5px;">
+                                <div class="mini-indicator"></div>
+                            </div>
+                        </label>
                         <div class="mini-switch active" id="img-toggle-btn" onclick="toggleImgVisibility()">
                             <div class="mini-indicator"></div>
                         </div>
@@ -455,7 +518,7 @@
         <button class="play-pause-btn" id="play-btn" onclick="togglePlay()">▶</button>
     </div>
 </div>
-<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | ENTER=UI | ARROWS=FX | SHIFT=PALETTE | Z=PART | X=GRID | C=BORDER</div>
+<div class="key-tip">KEYS: SPACE=PLAY/PAUSE | Z=PART | X=GRID | C=BORDER | A=TRIANGLE | S=CIRCLE | V=IMG SYNC</div>
 
 <script>
     const MAX_FILE_SIZE = 20 * 1024 * 1024; 
@@ -483,25 +546,25 @@
             react: 1.5, gridSize: 0.5, lineWeight: 0.3, 
             saturation: 0.8, colorMode: 0, 
             rot: 0.0, imgSize: 0.5, imgOpacity: 1.0, 
-            imgX: 0.0, imgY: 0.0, imgVisible: true,
+            imgX: 0.0, imgY: 0.0, imgVisible: true, imgSync: false,
             borderWidth: 0.0, borderDensity: 5.0, borderAlpha: 0.8, borderDistortion: 0.5,
             ytSize: 0.5, ytOpacity: 0.5, ytBlend: 'normal', ytInteractive: false,
             ytX: 0.0, ytY: 0.0, ytMuted: false,
-            gridVisible: true, particlesVisible: true, borderVisible: true
+            // Toggles - ALL DEFAULT OFF
+            gridVisible: false, particlesVisible: false, borderVisible: false, trianglesVisible: false, circlesVisible: false,
+            // Triangles
+            triSize: 0.5, triDensity: 5.0, triDistortion: 0.5, triAlpha: 0.8,
+            // Circles (New)
+            circSize: 0.5, circDensity: 5.0, circDistortion: 0.5, circAlpha: 0.8
         },
-        
-        // Smooth Transitions State
         toggles: {
-            grid: { val: 1.0, target: 1.0 },
-            part: { val: 1.0, target: 1.0 },
-            border: { val: 1.0, target: 1.0 }
+            grid: { val: 0.0, target: 0.0 }, // Start OFF
+            part: { val: 0.0, target: 0.0 }, // Start OFF
+            border: { val: 0.0, target: 0.0 }, // Start OFF
+            tri: { val: 0.0, target: 0.0 },
+            circ: { val: 0.0, target: 0.0 } // Start OFF
         },
-        palette: {
-            prev: 0,
-            curr: 0,
-            mix: 1.0 // 0.0 = prev, 1.0 = curr
-        },
-
+        palette: { prev: 0, curr: 0, mix: 1.0 },
         dynamicBorder: { width: 0.0, density: 5.0, alpha: 0.8, distortion: 0.5 },
         avgBass: 0, avgMid: 0, avgTreble: 0, avgVol: 0,
         customTime: 0, drift: 0, paletteTime: 0
@@ -509,17 +572,18 @@
     
     let activeSlider = null;
 
-    let myShader, fft, amplitude, mic;
+    let myShader, imgShader, fft, amplitude, mic;
     let soundFile = null;
     let centerImg = null; 
     let vizCtx; 
     let isScrubbing = false; 
 
-    const vert = `
+    const commonVert = `
         attribute vec3 aPosition; attribute vec2 aTexCoord; varying vec2 vTexCoord;
         void main() { vTexCoord = aTexCoord; gl_Position = vec4(aPosition * 2.0 - 1.0, 1.0); }
     `;
 
+    // --- MAIN BACKGROUND SHADER ---
     const frag = `
         precision mediump float;
         varying vec2 vTexCoord;
@@ -527,23 +591,14 @@
         uniform vec3 u_params; 
         uniform float u_react; 
         uniform float u_saturation; 
-        
-        // Palette uniforms
-        uniform int u_prevPalette;
-        uniform int u_currPalette;
-        uniform float u_paletteMix;
-        
-        uniform float u_useAutoPalette; // Kept for compat, currently always 0
-        uniform float u_paletteTime;    
-        uniform float u_gridSize; 
-        uniform float u_lineWeight; 
-        uniform float u_drift; 
+        uniform int u_prevPalette; uniform int u_currPalette; uniform float u_paletteMix;
+        uniform float u_gridSize; uniform float u_lineWeight; uniform float u_drift; 
         uniform float u_bass; uniform float u_treble; uniform float u_mid; uniform float u_vol; uniform float u_rot;
         uniform vec4 u_borderParams;
         
-        uniform float u_showGrid;
-        uniform float u_showParticles;
-        uniform float u_showBorder;
+        uniform float u_showGrid; uniform float u_showParticles; uniform float u_showBorder; uniform float u_showTriangles; uniform float u_showCircles;
+        uniform vec4 u_triParams; // x=size, y=density, z=dist, w=alpha
+        uniform vec4 u_circParams; // x=size, y=density, z=dist, w=alpha
 
         #define PI 3.14159265359
         mat2 rot2d(float a){ return mat2(cos(a),-sin(a),sin(a),cos(a)); }
@@ -565,6 +620,22 @@
             }
             return v;
         }
+        
+        // Signed Distance for Equilateral Triangle (Outline)
+        float sdEquilateralTriangle(in vec2 p, in float r ) {
+            const float k = 1.73205080757; 
+            p.x = abs(p.x) - 1.0*r;
+            p.y = p.y + 1.0/k*r;
+            if( p.x+k*p.y > 0.0 ) p = vec2(p.x-k*p.y, -k*p.x-p.y)/2.0;
+            p.x -= clamp( p.x, -2.0*r, 0.0 );
+            return -length(p)*sign(p.y);
+        }
+
+        // Signed Distance for Circle (Outline)
+        float sdCircle(in vec2 p, in float r) {
+            return length(p) - r;
+        }
+
         vec3 getRainbow(float t, float shift) {
             vec3 a = vec3(0.5, 0.5, 0.5); vec3 b = vec3(0.5, 0.5, 0.5); 
             vec3 c = vec3(1.0, 1.0, 1.0); vec3 d = vec3(0.0, 0.33, 0.67) + shift; 
@@ -610,7 +681,7 @@
             float warpStrength = 1.0 + u_params.x * 0.5 + u_bass * u_react; 
             vec2 q = vec2(fbm(mainUV + u_time * 0.5 + u_drift, 2), fbm(mainUV + vec2(5.2, 1.3) + u_time * 0.5 - u_drift, 2));
             vec2 r = vec2(fbm(mainUV + 2.0 * q + vec2(1.7, 9.2) + u_time * 0.5 + u_mid*0.2, 2), 
-                          fbm(mainUV + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));                       
+                          fbm(mainUV + 2.0 * q + vec2(8.3, 2.8) + u_time * 0.5 - u_mid*0.2, 2));                        
             float liquid = fbm(mainUV + r * warpStrength, 3);
             float ripple = fbm(mainUV * 4.0 + u_time + u_drift, 2);
             vec2 organicShift = vec2(ripple, ripple) * u_bass * u_react * 0.8; 
@@ -630,20 +701,15 @@
             float structureIntensity = rawGrid * gridAlpha * weightFade * min(u_params.y * 3.0, 2.0) * (1.0 + u_bass * 0.8);
             structureIntensity += structureIntensity * lineNoise * 0.5; 
             
-            // Smooth Grid Toggle
             structureIntensity *= u_showGrid;
 
             vec3 themeBG, themeStruct, themePart;
             float themeTime = liquid * 0.5 + u_time * 0.05;
             float themeBeat = u_bass * u_react;
             
-            // --- PALETTE MIXING LOGIC ---
-            vec3 bg1, st1, pt1;
-            vec3 bg2, st2, pt2;
-            
+            vec3 bg1, st1, pt1; vec3 bg2, st2, pt2;
             getThemeColors(u_prevPalette, themeTime, themeBeat, bg1, st1, pt1);
             getThemeColors(u_currPalette, themeTime, themeBeat, bg2, st2, pt2);
-            
             themeBG = mix(bg1, bg2, u_paletteMix);
             themeStruct = mix(st1, st2, u_paletteMix);
             themePart = mix(pt1, pt2, u_paletteMix);
@@ -671,8 +737,6 @@
             float borderLines = smoothstep(0.8, 0.9, pattern);
             float borderIntensity = borderLines * borderZone * u_borderParams.z * (1.0 + u_treble * u_react);
             borderIntensity *= opacityMod; 
-            
-            // Smooth Border Toggle
             borderIntensity *= u_showBorder;
 
             float particleIntensity = 0.0;
@@ -686,11 +750,9 @@
                     vec2 neighborID = id + neighbor;
                     float n = hash(neighborID); 
                     float t = u_time * (0.8 + n * 0.5) + u_drift * n;
-                    float x_freq = 2.0 + n * 3.0;
-                    float y_freq = 2.0 + fract(n * 10.0) * 3.0;
                     float shake = min(u_treble * u_react, 0.4);
-                    float posX = sin(t * x_freq + n * 10.0) * (0.6 + shake);
-                    float posY = cos(t * y_freq + n * 20.0) * (0.6 + shake);
+                    float posX = sin(t * (2.0+n*3.0) + n * 10.0) * (0.6 + shake);
+                    float posY = cos(t * (2.0+fract(n*10.0)*3.0) + n * 20.0) * (0.6 + shake);
                     float z_pos = sin(t * 1.5 + n * 5.0) * 1.5; 
                     vec2 pOffset = neighbor + vec2(posX, posY);
                     float sizeBoost = 1.0 + shake * 2.0;
@@ -700,15 +762,92 @@
                 }
             }
             particleIntensity *= min(u_params.z * 2.0, 1.2); 
-            
-            // Smooth Particle Toggle
             particleIntensity *= u_showParticles;
 
+            // --- TRIANGLE FX ---
+            float triIntensity = 0.0;
+            vec3 shapeFinalColor = vec3(0.0);
+
+            if(u_showTriangles > 0.01) {
+                vec2 tUV = centered * (0.5 + u_triParams.y * 0.8); 
+                vec2 tID = floor(tUV);
+                tUV = fract(tUV) - 0.5;
+                
+                for(int y=-1; y<=1; y++) {
+                    for(int x=-1; x<=1; x++) {
+                        vec2 neighbor = vec2(float(x), float(y));
+                        vec2 cellID = tID + neighbor;
+                        float h = hash(cellID * 13.0); 
+                        
+                        if (h > 0.7) { 
+                            float t = u_time * (0.5 + h) + h * 10.0;
+                            vec2 offset = neighbor;
+                            float rot = t * (h - 0.5) * 4.0 * (1.0 + u_mid * u_react);
+                            vec2 jitter = vec2(sin(t*2.0 + h*10.0), cos(t*2.0 + h*10.0)) * u_triParams.z * 0.3;
+                            vec2 pos = tUV - offset - jitter;
+                            pos *= rot2d(rot);
+                            
+                            float sizeVar = mix(0.2, 4.0, h * h); 
+                            float dynamicSize = u_triParams.x * sizeVar * 0.2 * (1.0 + u_bass * u_react * 0.8);
+                            float d = sdEquilateralTriangle(pos, dynamicSize);
+                            float line = smoothstep(0.02, 0.005, abs(d));
+                            vec3 tCol = getRainbow(u_time * 0.2 + h * 5.0, 0.0);
+                            
+                            triIntensity += line * u_triParams.w;
+                            shapeFinalColor += line * u_triParams.w * tCol;
+                        }
+                    }
+                }
+                triIntensity *= u_showTriangles;
+                shapeFinalColor *= u_showTriangles;
+            }
+
+            // --- CIRCLE FX ---
+            float circIntensity = 0.0;
+            vec3 circColor = vec3(0.0);
+            if(u_showCircles > 0.01) {
+                vec2 cUV = centered * (0.5 + u_circParams.y * 0.8);
+                vec2 cID = floor(cUV);
+                cUV = fract(cUV) - 0.5;
+
+                for(int y=-1; y<=1; y++) {
+                    for(int x=-1; x<=1; x++) {
+                        vec2 neighbor = vec2(float(x), float(y));
+                        vec2 cellID = cID + neighbor;
+                        float h = hash(cellID * 21.0); // Different seed
+
+                        if (h > 0.6) {
+                            float t = u_time * (0.5 + h) + h * 5.0;
+                            vec2 offset = neighbor;
+                            // Jitter
+                            vec2 jitter = vec2(cos(t*1.5 + h*10.0), sin(t*1.5 + h*10.0)) * u_circParams.z * 0.4;
+                            vec2 pos = cUV - offset - jitter;
+                            
+                            float sizeVar = mix(0.2, 3.0, h*h);
+                            float dynamicSize = u_circParams.x * sizeVar * 0.2 * (1.0 + u_bass * u_react * 0.8);
+                            float d = sdCircle(pos, dynamicSize);
+                            float line = smoothstep(0.02, 0.005, abs(d));
+                            vec3 cCol = getRainbow(u_time * 0.3 + h * 8.0, 0.4); // Shift hue
+
+                            circIntensity += line * u_circParams.w;
+                            circColor += line * u_circParams.w * cCol;
+                        }
+                    }
+                }
+                circIntensity *= u_showCircles;
+                circColor *= u_showCircles;
+            }
+
             vec3 borderCol = themePart * borderIntensity; 
-            vec3 fullColor = (themeBG * (0.2 + liquid * 0.3)) 
+            
+            // Composite everything
+            vec3 baseColor = (themeBG * (0.2 + liquid * 0.3)) 
                            + (themeStruct * structureIntensity) 
                            + (themePart * particleIntensity)
                            + borderCol;
+                           
+            vec3 fullColor = baseColor + shapeFinalColor + circColor; 
+                           
             float luminance = dot(fullColor, vec3(0.299, 0.587, 0.114));
             vec3 monoColor = vec3(luminance) * 1.2; 
             monoColor = pow(monoColor, vec3(1.4));
@@ -723,6 +862,43 @@
         }
     `;
 
+    // --- IMAGE SYNC SHADER ---
+    const imgFrag = `
+        precision mediump float;
+        varying vec2 vTexCoord;
+        uniform sampler2D u_tex;
+        uniform float u_time;
+        uniform float u_bass;
+        uniform float u_treble;
+        uniform float u_vol;
+        uniform float u_active; 
+        uniform float u_opacity;
+
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+
+        void main() {
+            vec2 uv = vTexCoord;
+            uv.y = 1.0 - uv.y; 
+
+            if (u_active > 0.5) {
+                uv.x += sin(uv.y * 10.0 + u_time * 5.0) * u_bass * 0.05;
+                float strip = floor(uv.y * 20.0);
+                float noise = hash(vec2(strip, floor(u_time * 20.0)));
+                if (noise < u_treble * 0.5) {
+                    uv.x += (hash(vec2(u_time)) - 0.5) * 0.2;
+                }
+            }
+            float shift = 0.0;
+            if (u_active > 0.5) shift = u_vol * 0.02;
+            
+            float r = texture2D(u_tex, uv + vec2(shift, 0.0)).r;
+            float g = texture2D(u_tex, uv).g;
+            float b = texture2D(u_tex, uv - vec2(shift, 0.0)).b;
+            float a = texture2D(u_tex, uv).a;
+            gl_FragColor = vec4(r, g, b, a * u_opacity);
+        }
+    `;
+
     function reloadPage() { location.reload(); }
 
     function updateSliderUI(id, val) {
@@ -733,6 +909,9 @@
             else if(id === 'imgYParam') document.getElementById('val-img-y').innerText = val.toFixed(2);
             else if(id === 'ytXParam') document.getElementById('val-yt-x').innerText = val.toFixed(2);
             else if(id === 'ytYParam') document.getElementById('val-yt-y').innerText = val.toFixed(2);
+            else if(id === 'borderDistortion' || id === 'borderWidth' || id === 'borderAlpha' || id === 'triSize' || id === 'triDist' || id === 'triAlpha' || id === 'circSize' || id === 'circDist' || id === 'circAlpha') {
+                 el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
+            }
             else el.previousElementSibling.querySelector('.value').innerText = val.toFixed(2);
         }
     }
@@ -758,12 +937,16 @@
             toggleGrid();
         } else if (key === 'c' || key === 'C') {
             toggleBorder();
+        } else if (key === 'a' || key === 'A') {
+            toggleTriangles();
+        } else if (key === 's' || key === 'S') {
+            toggleCircles();
+        } else if (key === 'v' || key === 'V') {
+            toggleImgSync();
         } else if (keyCode === SHIFT) {
-            // Cycle Palette with fade
             state.palette.prev = state.palette.curr;
             state.palette.curr = (state.palette.curr + 1) % 5;
-            state.palette.mix = 0.0; // Start Fade
-            
+            state.palette.mix = 0.0; 
             let select = document.getElementById('paletteSelect');
             select.value = state.palette.curr;
             state.global.colorMode = state.palette.curr;
@@ -778,7 +961,6 @@
 
     // --- TOGGLES ---
     window.toggleGrid = () => {
-        // Toggle target state 0 or 1
         state.toggles.grid.target = state.toggles.grid.target > 0.5 ? 0.0 : 1.0;
         const btn = document.getElementById('grid-toggle-btn');
         if(state.toggles.grid.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
@@ -792,6 +974,22 @@
         state.toggles.border.target = state.toggles.border.target > 0.5 ? 0.0 : 1.0;
         const btn = document.getElementById('border-toggle-btn');
         if(state.toggles.border.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
+    }
+    window.toggleTriangles = () => {
+        state.toggles.tri.target = state.toggles.tri.target > 0.5 ? 0.0 : 1.0;
+        const btn = document.getElementById('tri-toggle-btn');
+        if(state.toggles.tri.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
+    }
+    window.toggleCircles = () => {
+        state.toggles.circ.target = state.toggles.circ.target > 0.5 ? 0.0 : 1.0;
+        const btn = document.getElementById('circ-toggle-btn');
+        if(state.toggles.circ.target > 0.5) btn.classList.add('active'); else btn.classList.remove('active');
+    }
+
+    window.toggleImgSync = () => {
+        state.global.imgSync = !state.global.imgSync;
+        const btn = document.getElementById('img-sync-btn');
+        if(state.global.imgSync) btn.classList.add('active'); else btn.classList.remove('active');
     }
 
     window.toggleImgVisibility = () => {
@@ -917,7 +1115,9 @@
         cnv.style('z-index', '1'); 
         cnv.id('defaultCanvas0');
         noStroke();
-        myShader = createShader(vert, frag);
+        
+        myShader = createShader(commonVert, frag);
+        imgShader = createShader(commonVert, imgFrag);
         
         mic = new p5.AudioIn();
         fft = new p5.FFT(0.8, 32); 
@@ -933,7 +1133,7 @@
         paletteSelect.addEventListener('change', (e) => {
              state.palette.prev = state.palette.curr;
              state.palette.curr = parseInt(e.target.value);
-             state.palette.mix = 0.0; // start fade
+             state.palette.mix = 0.0; 
              state.global.colorMode = state.palette.curr;
         });
 
@@ -943,7 +1143,9 @@
             'borderWidth', 'borderDensity', 'borderDistortion', 'borderAlpha',
             'ytSize', 'ytOpacity',
             'imgSizeParam', 'imgOpacityParam', 'imgXParam', 'imgYParam',
-            'ytXParam', 'ytYParam'
+            'ytXParam', 'ytYParam',
+            'triSize', 'triDensity', 'triDist', 'triAlpha',
+            'circSize', 'circDensity', 'circDist', 'circAlpha'
         ];
 
         controls.forEach((id) => {
@@ -967,6 +1169,14 @@
                     else if(id === 'borderDensity') state.global.borderDensity = val;
                     else if(id === 'borderDistortion') state.global.borderDistortion = val;
                     else if(id === 'borderAlpha') state.global.borderAlpha = val;
+                    else if(id === 'triSize') state.global.triSize = val;
+                    else if(id === 'triDensity') state.global.triDensity = val;
+                    else if(id === 'triDist') state.global.triDistortion = val;
+                    else if(id === 'triAlpha') state.global.triAlpha = val;
+                    else if(id === 'circSize') state.global.circSize = val;
+                    else if(id === 'circDensity') state.global.circDensity = val;
+                    else if(id === 'circDist') state.global.circDistortion = val;
+                    else if(id === 'circAlpha') state.global.circAlpha = val;
                     else if(id === 'ytSize') { state.global.ytSize = val; updateYTStyles(); }
                     else if(id === 'ytOpacity') { state.global.ytOpacity = val; updateYTStyles(); }
                     else if(id === 'ytXParam') { state.global.ytX = val; updateYTStyles(); }
@@ -1017,12 +1227,23 @@
     }
 
     function initApp() {
-        userStartAudio(); 
-        mic.start(); 
-        state.running = true;
-        const ov = document.getElementById('overlay');
-        ov.style.opacity = 0;
-        setTimeout(()=> ov.style.display='none', 500);
+        try {
+            if(mic) {
+                userStartAudio(); 
+                mic.start(); 
+                state.running = true;
+                const ov = document.getElementById('overlay');
+                ov.style.opacity = 0;
+                setTimeout(()=> ov.style.display='none', 500);
+            } else {
+                state.running = true;
+                document.getElementById('overlay').style.display = 'none';
+            }
+        } catch(e) {
+            console.log("Init error", e);
+            state.running = true;
+            document.getElementById('overlay').style.display = 'none';
+        }
     }
 
     function cleanupSound() {
@@ -1152,7 +1373,7 @@
         }
 
         let spectrum = fft.analyze();
-        let bass = fft.getEnergy("bass") / 255.0;      
+        let bass = fft.getEnergy("bass") / 255.0;       
         let mid = fft.getEnergy("mid") / 255.0;
         let treble = fft.getEnergy("treble") / 255.0;
         let vol = amplitude.getLevel();
@@ -1175,14 +1396,14 @@
         state.avgTreble = lerp(state.avgTreble, treble, smoothFactor);
         state.avgVol = lerp(state.avgVol, vol, smoothFactor);
 
-        // Smooth Toggles Logic
         state.toggles.grid.val = lerp(state.toggles.grid.val, state.toggles.grid.target, 0.1);
         state.toggles.part.val = lerp(state.toggles.part.val, state.toggles.part.target, 0.1);
         state.toggles.border.val = lerp(state.toggles.border.val, state.toggles.border.target, 0.1);
+        state.toggles.tri.val = lerp(state.toggles.tri.val, state.toggles.tri.target, 0.1);
+        state.toggles.circ.val = lerp(state.toggles.circ.val, state.toggles.circ.target, 0.1);
 
-        // Smooth Palette Logic
         if (state.palette.mix < 1.0) {
-            state.palette.mix += 0.05; // Transition speed
+            state.palette.mix += 0.05;
             if (state.palette.mix > 1.0) state.palette.mix = 1.0;
         }
 
@@ -1196,17 +1417,34 @@
             state.drift += 0.002 + (state.avgBass * 0.01); 
             state.paletteTime += 0.005 + (state.avgBass * 0.05);
             
-            // ALIVE UI: BORDER
+            // ALIVE UI: BORDER, TRIANGLE, CIRCLE
             let borderDist = state.global.borderDistortion + (state.avgBass * 0.5 * state.global.react);
             let borderWidth = state.global.borderWidth + (state.avgBass * 0.2 * state.global.react);
             let borderAlpha = state.global.borderAlpha + (state.avgTreble * 0.3 * state.global.react);
             if(borderAlpha > 1.0) borderAlpha = 1.0;
             
+            let triSize = state.global.triSize + (state.avgBass * 0.4 * state.global.react);
+            let triDist = state.global.triDistortion + (state.avgBass * 0.3 * state.global.react);
+            let triAlpha = state.global.triAlpha + (state.avgMid * 0.3 * state.global.react);
+            if(triAlpha > 1.0) triAlpha = 1.0;
+
+            let circSize = state.global.circSize + (state.avgBass * 0.4 * state.global.react);
+            let circDist = state.global.circDistortion + (state.avgBass * 0.3 * state.global.react);
+            let circAlpha = state.global.circAlpha + (state.avgTreble * 0.3 * state.global.react);
+            if(circAlpha > 1.0) circAlpha = 1.0;
+
             if(activeSlider !== 'borderDistortion') updateSliderUI('borderDistortion', borderDist);
             if(activeSlider !== 'borderWidth') updateSliderUI('borderWidth', borderWidth);
             if(activeSlider !== 'borderAlpha') updateSliderUI('borderAlpha', borderAlpha);
             
-            // Param 1 (Flow) visual update
+            if(activeSlider !== 'triSize') updateSliderUI('triSize', triSize);
+            if(activeSlider !== 'triDist') updateSliderUI('triDist', triDist);
+            if(activeSlider !== 'triAlpha') updateSliderUI('triAlpha', triAlpha);
+
+            if(activeSlider !== 'circSize') updateSliderUI('circSize', circSize);
+            if(activeSlider !== 'circDist') updateSliderUI('circDist', circDist);
+            if(activeSlider !== 'circAlpha') updateSliderUI('circAlpha', circAlpha);
+
             let flowBoost = pow(state.avgBass, 2.0) * state.global.react * 0.5;
             if(activeSlider !== 'param1') updateSliderUI('param1', state.params[0] + flowBoost);
 
@@ -1223,6 +1461,8 @@
             state.dynamicParams[i] = lerp(state.dynamicParams[i], state.params[i], 0.1);
         }
 
+        state.dynamicBorder.width = lerp(state.dynamicBorder.width, state.global.borderWidth, 0.1);
+
         shader(myShader);
         myShader.setUniform('u_res', [width, height]); 
         myShader.setUniform('u_time', state.customTime);
@@ -1231,14 +1471,11 @@
         myShader.setUniform('u_react', state.global.react); 
         myShader.setUniform('u_saturation', state.global.saturation); 
         myShader.setUniform('u_colorMode', state.global.colorMode); 
-        myShader.setUniform('u_useAutoPalette', 0.0); // Always 0 for manual mix
+        myShader.setUniform('u_useAutoPalette', 0.0);
         myShader.setUniform('u_paletteTime', state.paletteTime);
-        
-        // Palette Mix Uniforms
         myShader.setUniform('u_prevPalette', state.palette.prev);
         myShader.setUniform('u_currPalette', state.palette.curr);
         myShader.setUniform('u_paletteMix', state.palette.mix);
-
         myShader.setUniform('u_gridSize', state.global.gridSize); 
         myShader.setUniform('u_lineWeight', state.global.lineWeight); 
         myShader.setUniform('u_rot', rotAccumulator);
@@ -1247,23 +1484,47 @@
         myShader.setUniform('u_treble', state.avgTreble);
         myShader.setUniform('u_vol', state.avgVol);
         
-        myShader.setUniform('u_borderParams', [
-            state.global.borderWidth, 
-            state.global.borderDensity, 
-            state.global.borderAlpha, 
-            state.global.borderDistortion
-        ]);
+        let finalBW = state.syncMode ? (state.global.borderWidth + (state.avgBass * 0.2 * state.global.react)) : state.global.borderWidth;
+        let finalBD = state.syncMode ? (state.global.borderDistortion + (state.avgBass * 0.5 * state.global.react)) : state.global.borderDistortion;
+        let finalBA = state.syncMode ? Math.min(1.0, state.global.borderAlpha + (state.avgTreble * 0.3 * state.global.react)) : state.global.borderAlpha;
         
-        // Pass smoothed toggle values
+        myShader.setUniform('u_borderParams', [finalBW, state.global.borderDensity, finalBA, finalBD]);
+        
+        // Triangle Params
+        let finalTS = state.syncMode ? (state.global.triSize + (state.avgBass * 0.4 * state.global.react)) : state.global.triSize;
+        let finalTD = state.syncMode ? (state.global.triDistortion + (state.avgBass * 0.3 * state.global.react)) : state.global.triDistortion;
+        let finalTA = state.syncMode ? Math.min(1.0, state.global.triAlpha + (state.avgMid * 0.3 * state.global.react)) : state.global.triAlpha;
+        
+        myShader.setUniform('u_triParams', [finalTS, state.global.triDensity, finalTD, finalTA]);
+
+        // Circle Params (New)
+        let finalCS = state.syncMode ? (state.global.circSize + (state.avgBass * 0.4 * state.global.react)) : state.global.circSize;
+        let finalCD = state.syncMode ? (state.global.circDistortion + (state.avgBass * 0.3 * state.global.react)) : state.global.circDistortion;
+        let finalCA = state.syncMode ? Math.min(1.0, state.global.circAlpha + (state.avgTreble * 0.3 * state.global.react)) : state.global.circAlpha;
+        
+        myShader.setUniform('u_circParams', [finalCS, state.global.circDensity, finalCD, finalCA]);
+        
         myShader.setUniform('u_showGrid', state.toggles.grid.val);
         myShader.setUniform('u_showParticles', state.toggles.part.val);
         myShader.setUniform('u_showBorder', state.toggles.border.val);
+        myShader.setUniform('u_showTriangles', state.toggles.tri.val);
+        myShader.setUniform('u_showCircles', state.toggles.circ.val);
 
         rect(-width/2, -height/2, width, height);
 
         if (centerImg && state.global.imgVisible) {
             if (centerImg.width > 0) {
-                resetShader(); 
+                shader(imgShader);
+                imgShader.setUniform('uModelViewMatrix', this._renderer.uModelViewMatrix);
+                imgShader.setUniform('uProjectionMatrix', this._renderer.uProjectionMatrix);
+                imgShader.setUniform('u_tex', centerImg);
+                imgShader.setUniform('u_time', state.customTime);
+                imgShader.setUniform('u_bass', state.avgBass * state.global.react);
+                imgShader.setUniform('u_treble', state.avgTreble * state.global.react);
+                imgShader.setUniform('u_vol', state.avgVol * state.global.react);
+                imgShader.setUniform('u_active', state.global.imgSync ? 1.0 : 0.0);
+                imgShader.setUniform('u_opacity', state.global.imgOpacity);
+
                 push();
                 let gl = this._renderer.GL;
                 gl.disable(gl.DEPTH_TEST);
@@ -1275,18 +1536,21 @@
                 
                 let aspect = centerImg.width / centerImg.height;
                 let baseScale = min(width, height) * 0.8; 
-                let displayW, displayH;
+                
+                let pulse = 1.0;
+                if(state.syncMode && state.global.imgSync) {
+                    pulse = 1.0 + (state.avgBass * 0.2 * state.global.react);
+                }
 
+                let displayW, displayH;
                 if (aspect > 1) {
-                    displayW = baseScale * state.global.imgSize;
+                    displayW = baseScale * state.global.imgSize * pulse;
                     displayH = displayW / aspect;
                 } else {
-                    displayH = baseScale * state.global.imgSize;
+                    displayH = baseScale * state.global.imgSize * pulse;
                     displayW = displayH * aspect;
                 }
 
-                tint(255, state.global.imgOpacity * 255);
-                texture(centerImg);
                 noStroke();
                 plane(displayW, displayH);
                 gl.enable(gl.DEPTH_TEST);
@@ -1306,16 +1570,13 @@
         state.syncMode = !state.syncMode;
         const btn = document.getElementById('sync-btn');
         const lbl = btn.querySelector('.switch-label');
-        const palLabel = document.getElementById('paletteLabel');
         if(state.syncMode) {
             btn.classList.add('active'); 
             lbl.innerText = "AUDIO SYNC: ON";
-            palLabel.innerText = "Color Palette (CYCLING)";
             document.querySelectorAll('.slider-group').forEach(el => el.classList.add('sync-active'));
         } else {
             btn.classList.remove('active'); 
             lbl.innerText = "AUDIO SYNC: OFF";
-            palLabel.innerText = "Color Palette";
             document.querySelectorAll('.slider-group').forEach(el => el.classList.remove('sync-active'));
         }
     };
